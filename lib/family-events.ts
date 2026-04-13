@@ -1,0 +1,1 @@
+export const FAMILY_UPDATED_EVENT = "family-updated";

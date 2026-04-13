@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Supabase: Start",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sb:start"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Supabase: Status",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sb:status"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Supabase: Push DB",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "sb:push"],
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
