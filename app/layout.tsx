@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, M_PLUS_Rounded_1c } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const roundedSans = M_PLUS_Rounded_1c({
+  variable: "--font-rounded-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -13,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "family-money-app",
+  title: "ファミマネ",
   description: "家族でたのしくお金を学ぶアプリ",
 };
 
@@ -25,7 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${roundedSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

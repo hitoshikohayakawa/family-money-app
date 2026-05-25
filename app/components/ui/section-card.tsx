@@ -17,20 +17,20 @@ export default function SectionCard({
 }: SectionCardProps) {
   const toneClasses =
     tone === "playful"
-      ? "border-[var(--border-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,252,255,0.96))]"
+      ? "border-[var(--border-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(242,250,243,0.96))]"
       : "border-[var(--border-soft)] bg-[var(--surface-card)]";
 
   return (
     <section
-      className={`rounded-[30px] border px-5 py-5 shadow-[var(--shadow-card)] backdrop-blur sm:px-6 sm:py-6 ${toneClasses} ${className}`}
+      className={`rounded-[34px] border px-5 py-5 shadow-[var(--shadow-card)] backdrop-blur sm:px-7 sm:py-7 ${toneClasses} ${className}`}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          <h2 className="text-[1.8rem] font-extrabold tracking-tight text-[var(--text-primary)] sm:text-[2rem]">
             {title}
           </h2>
           {description ? (
-            <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
+            <p className="mt-2 text-base leading-7 text-[var(--text-secondary)] sm:text-lg">
               {description}
             </p>
           ) : null}

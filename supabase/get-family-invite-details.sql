@@ -3,8 +3,10 @@ returns table (
   invite_id uuid,
   email text,
   role text,
-  status text,
+  stored_status text,
+  effective_status text,
   expires_at timestamptz,
+  membership_exists boolean,
   is_expired boolean
 )
 language plpgsql
@@ -13,6 +15,8 @@ set search_path = public
 as $$
 declare
   invite_record public.family_invites%rowtype;
+  invite_membership_exists boolean;
+  normalized_status text;
 begin
   select *
     into invite_record
@@ -23,14 +27,34 @@ begin
     raise exception 'Invite not found';
   end if;
 
+  select exists (
+    select 1
+    from public.profiles p
+    join public.family_memberships fms
+      on fms.user_id = p.id
+    where lower(p.email) = lower(invite_record.email)
+      and fms.family_id = invite_record.family_id
+      and fms.status = 'active'::public.family_membership_status
+  )
+    into invite_membership_exists;
+
+  normalized_status := public.resolve_family_invite_status(
+    invite_membership_exists,
+    invite_record.status,
+    invite_record.accepted_at,
+    invite_record.expires_at
+  );
+
   return query
   select
     invite_record.id,
     invite_record.email,
     invite_record.role,
     invite_record.status,
+    normalized_status,
     invite_record.expires_at,
-    (invite_record.status = 'expired' or invite_record.expires_at <= now()) as is_expired;
+    invite_membership_exists,
+    (normalized_status = 'expired') as is_expired;
 end;
 $$;
 

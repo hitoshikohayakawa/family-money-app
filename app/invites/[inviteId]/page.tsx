@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import EmptyState from "@/app/components/ui/empty-state";
 import PageContainer from "@/app/components/ui/page-container";
@@ -16,8 +16,10 @@ type InviteDetails = {
   invite_id: string;
   email: string;
   role: string;
-  status: string;
+  stored_status: string;
+  effective_status: string;
   expires_at: string;
+  membership_exists: boolean;
   is_expired: boolean;
 };
 
@@ -32,7 +34,12 @@ type InvitePageState = {
 
 export default function InviteAcceptPage() {
   const params = useParams<{ inviteId: string }>();
+  const router = useRouter();
   const inviteId = params.inviteId;
+  const loginHref = useMemo(
+    () => `/login?next=${encodeURIComponent(`/invites/${inviteId}`)}`,
+    [inviteId]
+  );
   const [state, setState] = useState<InvitePageState>({
     loading: true,
     accepting: false,
@@ -101,9 +108,18 @@ export default function InviteAcceptPage() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [inviteId]);
+
+  const loginHrefWithInviteEmail = state.inviteDetails?.email
+    ? `${loginHref}&email=${encodeURIComponent(state.inviteDetails.email)}`
+    : loginHref;
 
   const handleAcceptInvite = async () => {
+    if (!state.email) {
+      router.push(loginHrefWithInviteEmail);
+      return;
+    }
+
     setState((currentState) => ({
       ...currentState,
       accepting: true,
@@ -126,6 +142,35 @@ export default function InviteAcceptPage() {
 
     const result = Array.isArray(data) ? data[0] : null;
 
+    if (!result || result.status !== "accepted") {
+      setState((currentState) => ({
+        ...currentState,
+        accepting: false,
+        error: "招待の受諾結果を確認できませんでした。もう一度お試しください。",
+      }));
+      return;
+    }
+
+    const { data: refreshedInviteData, error: refreshedInviteError } = await supabase.rpc(
+      "get_family_invite_details",
+      {
+        target_invite_id: inviteId,
+      }
+    );
+
+    if (refreshedInviteError) {
+      setState((currentState) => ({
+        ...currentState,
+        accepting: false,
+        error: `招待は受け付けましたが確認に失敗しました: ${refreshedInviteError.message}`,
+      }));
+      return;
+    }
+
+    const refreshedInviteDetails = Array.isArray(refreshedInviteData)
+      ? (refreshedInviteData[0] as InviteDetails | undefined)
+      : undefined;
+
     setState((currentState) => ({
       ...currentState,
       accepting: false,
@@ -133,6 +178,7 @@ export default function InviteAcceptPage() {
       successMessage: result
         ? `招待を受け取りました。役わり: ${formatFamilyRole(result.role)}`
         : "招待を受諾しました。",
+      inviteDetails: refreshedInviteDetails ?? currentState.inviteDetails,
     }));
 
     window.setTimeout(() => {
@@ -175,8 +221,8 @@ export default function InviteAcceptPage() {
                 <div className="rounded-[var(--radius-lg)] bg-[var(--surface-card-strong)] px-4 py-4">
                   <p className="text-sm font-semibold text-[var(--text-secondary)]">いまの状態</p>
                   <div className="mt-2">
-                    <StatusBadge tone={inviteStatusTone(state.inviteDetails.status)}>
-                      {formatInviteStatus(state.inviteDetails.status)}
+                    <StatusBadge tone={inviteStatusTone(state.inviteDetails.effective_status)}>
+                      {formatInviteStatus(state.inviteDetails.effective_status)}
                     </StatusBadge>
                   </div>
                 </div>
@@ -218,19 +264,22 @@ export default function InviteAcceptPage() {
                 onClick={handleAcceptInvite}
                 disabled={
                   state.accepting ||
-                  !state.email ||
                   !state.inviteDetails ||
                   state.inviteDetails.is_expired ||
-                  state.inviteDetails.status !== "pending" ||
-                  state.email !== state.inviteDetails.email
+                  state.inviteDetails.effective_status !== "pending" ||
+                  Boolean(state.email && state.email !== state.inviteDetails.email)
                 }
               >
-                {state.accepting ? "参加中..." : "この招待で参加する"}
+                {state.accepting
+                  ? "参加中..."
+                  : state.email
+                    ? "この招待で参加する"
+                    : "ログインしてこの招待で参加する"}
               </PrimaryButton>
 
               {!state.email ? (
                 <Link
-                  href="/login"
+                  href={loginHrefWithInviteEmail}
                   className="inline-flex"
                 >
                   <SecondaryButton>ログインページへ</SecondaryButton>

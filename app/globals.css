@@ -1,81 +1,87 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f8fc;
-  --foreground: #20314b;
-  --app-bg: #f5f7fb;
+  --background: #f7fbf3;
+  --foreground: #203125;
+  --app-bg: #f4fbf2;
   --surface-card: rgba(255, 255, 255, 0.94);
   --surface-card-strong: #ffffff;
-  --surface-soft: #fdf4df;
-  --surface-accent: #eaf2ff;
-  --surface-success: #e6f6ee;
-  --surface-pink: #fbe7ef;
-  --surface-strong: #243b6b;
-  --surface-strong-soft: #35538f;
-  --border-soft: rgba(109, 132, 177, 0.18);
-  --border-strong: rgba(111, 149, 229, 0.24);
-  --text-primary: #20314b;
-  --text-secondary: #53657f;
-  --text-muted: #7183a1;
-  --brand-primary: #6f95e5;
-  --brand-primary-strong: #587dd0;
+  --surface-soft: #fff2d8;
+  --surface-accent: #e6f5e9;
+  --surface-success: #ddf5e4;
+  --surface-pink: #f9e7df;
+  --surface-strong: #256044;
+  --surface-strong-soft: #327355;
+  --border-soft: rgba(84, 130, 95, 0.18);
+  --border-strong: rgba(64, 145, 87, 0.24);
+  --text-primary: #203125;
+  --text-secondary: #52685a;
+  --text-muted: #74897b;
+  --brand-primary: #4ca368;
+  --brand-primary-strong: #2f7f4a;
   --brand-secondary: #ffffff;
-  --brand-secondary-ink: #29415f;
-  --button-primary-bg: #243b6b;
-  --button-primary-hover: #1f3158;
-  --button-secondary-bg: #f5f8ff;
-  --button-secondary-hover: #eaf1ff;
-  --brand-blue: #88aef3;
-  --brand-green: #86c8a5;
-  --brand-pink: #efacc0;
-  --brand-orange: #f4b37c;
-  --brand-cream: #f6e6b8;
-  --info: #587dd0;
-  --success: #53956f;
-  --warning: #c28a42;
-  --danger: #c86c83;
-  --radius-xl: 28px;
-  --radius-lg: 22px;
-  --radius-md: 16px;
+  --brand-secondary-ink: #214634;
+  --button-primary-bg: #2f7f4a;
+  --button-primary-hover: #296c3f;
+  --button-secondary-bg: #f3fbf4;
+  --button-secondary-hover: #e5f5e8;
+  --brand-blue: #78c38e;
+  --brand-green: #4ca368;
+  --brand-pink: #e9b286;
+  --brand-orange: #e4a35e;
+  --brand-cream: #f1e2ae;
+  --info: #2f7f4a;
+  --success: #2f8d4c;
+  --warning: #b6842c;
+  --danger: #bf6e52;
+  --radius-xl: 30px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
   --space-xs: 0.5rem;
   --space-sm: 0.75rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
-  --shadow-card: 0 18px 50px rgba(49, 76, 120, 0.12);
+  --shadow-card: 0 20px 46px rgba(51, 101, 63, 0.12);
+  --focus-ring: rgba(76, 163, 104, 0.2);
+  --tint-accent-strong: rgba(76, 163, 104, 0.16);
+  --tint-accent-soft: rgba(230, 245, 233, 0.92);
+  --tint-surface-soft: rgba(243, 251, 244, 0.78);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-rounded-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 html {
   color-scheme: light;
   background:
-    radial-gradient(circle at top left, rgba(136, 174, 243, 0.18), transparent 26%),
-    radial-gradient(circle at top right, rgba(246, 230, 184, 0.22), transparent 24%),
-    radial-gradient(circle at 50% 0%, rgba(239, 172, 192, 0.16), transparent 26%),
+    radial-gradient(circle at top left, rgba(76, 163, 104, 0.18), transparent 26%),
+    radial-gradient(circle at top right, rgba(241, 226, 174, 0.26), transparent 24%),
+    radial-gradient(circle at 50% 0%, rgba(233, 178, 134, 0.12), transparent 26%),
     var(--app-bg);
+  font-size: 17px;
 }
 
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 16%, rgba(136, 174, 243, 0.2), transparent 22%),
-    radial-gradient(circle at 88% 12%, rgba(246, 230, 184, 0.24), transparent 24%),
-    radial-gradient(circle at 80% 82%, rgba(134, 200, 165, 0.16), transparent 22%),
-    radial-gradient(circle at 20% 84%, rgba(239, 172, 192, 0.14), transparent 18%),
-    linear-gradient(180deg, #f7f9fd 0%, #f4f7fb 58%, #f8f8fc 100%),
+    radial-gradient(circle at 12% 16%, rgba(76, 163, 104, 0.2), transparent 22%),
+    radial-gradient(circle at 88% 12%, rgba(241, 226, 174, 0.24), transparent 24%),
+    radial-gradient(circle at 80% 82%, rgba(144, 203, 149, 0.16), transparent 22%),
+    radial-gradient(circle at 20% 84%, rgba(233, 178, 134, 0.12), transparent 18%),
+    linear-gradient(180deg, #f8fcf6 0%, #f3f9f0 58%, #f9fbf5 100%),
     var(--app-bg);
   color: var(--text-primary);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-rounded-sans), sans-serif;
+  line-height: 1.65;
 }
 
 ::selection {
-  background: rgba(245, 155, 87, 0.26);
+  background: rgba(127, 199, 142, 0.3);
 }
 
 a,
@@ -92,4 +98,16 @@ select {
 
 button:active {
   transform: translateY(1px);
+}
+
+ruby {
+  ruby-align: center;
+  ruby-position: over;
+}
+
+rt {
+  color: var(--text-muted);
+  font-size: 0.52em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }

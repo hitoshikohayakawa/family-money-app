@@ -27,10 +27,31 @@ type FamilyInvite = {
   id: string;
   email: string;
   role: "guardian" | "child";
-  status: "pending" | "accepted" | "expired" | "revoked";
+  stored_status: string;
+  effective_status: "pending" | "accepted" | "expired" | "revoked";
   created_at: string;
   expires_at: string;
 };
+
+type CreatedInviteResponse = {
+  invite?: {
+    id: string;
+    email: string;
+    role: "guardian" | "child";
+    expires_at: string;
+  };
+  initialPassword?: string;
+  error?: string;
+};
+
+async function fetchFamilyInvites() {
+  const { data, error } = await supabase.rpc("list_family_invites_for_current_user");
+
+  return {
+    data: Array.isArray(data) ? (data as FamilyInvite[]) : [],
+    error,
+  };
+}
 
 type InviteFilter = "all" | "pending" | "accepted" | "revoked" | "expired";
 
@@ -42,6 +63,7 @@ type FamilyInvitesState = {
   successMessage: string;
   copiedInviteId: string | null;
   copiedShareTextInviteId: string | null;
+  initialPasswordsByInviteId: Record<string, string>;
   membership: FamilyMembership | null;
   invites: FamilyInvite[];
 };
@@ -58,6 +80,7 @@ export default function FamilyInvitesPanel() {
     successMessage: "",
     copiedInviteId: null,
     copiedShareTextInviteId: null,
+    initialPasswordsByInviteId: {},
     membership: null,
     invites: [],
   });
@@ -84,6 +107,7 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
+          initialPasswordsByInviteId: {},
           membership: null,
           invites: [],
         });
@@ -99,6 +123,7 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
+          initialPasswordsByInviteId: {},
           membership: null,
           invites: [],
         });
@@ -125,6 +150,7 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
+          initialPasswordsByInviteId: {},
           membership: null,
           invites: [],
         });
@@ -140,17 +166,14 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
+          initialPasswordsByInviteId: {},
           membership: null,
           invites: [],
         });
         return;
       }
 
-      const { data: invites, error: invitesError } = await supabase
-        .from("family_invites")
-        .select("id, email, role, status, created_at, expires_at")
-        .eq("family_id", membership.family_id)
-        .order("created_at", { ascending: false });
+      const { data: invites, error: invitesError } = await fetchFamilyInvites();
 
       if (!isActive) {
         return;
@@ -165,6 +188,7 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
+          initialPasswordsByInviteId: {},
           membership,
           invites: [],
         });
@@ -228,31 +252,64 @@ export default function FamilyInvitesPanel() {
 
     const {
       data: { session },
+      error: sessionError,
     } = await supabase.auth.getSession();
 
-    const { error } = await supabase.from("family_invites").insert({
-      family_id: state.membership.family_id,
-      email: normalizedEmail,
-      role: inviteRole,
-      invited_by_user_id: session?.user?.id,
-    });
-
-    if (error) {
+    if (sessionError || !session?.access_token) {
       setState((currentState) => ({
         ...currentState,
         submitting: false,
         revokingInviteId: null,
-        error: `招待の作成に失敗しました: ${error.message}`,
+        error: "ログイン状態の確認に失敗しました。",
         successMessage: "",
       }));
       return;
     }
 
-    const { data: invites, error: invitesError } = await supabase
-      .from("family_invites")
-      .select("id, email, role, status, created_at, expires_at")
-      .eq("family_id", state.membership.family_id)
-      .order("created_at", { ascending: false });
+    let response: Response;
+
+    try {
+      response = await fetch("/api/family-invites", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          familyId: state.membership.family_id,
+          email: normalizedEmail,
+          role: inviteRole,
+        }),
+      });
+    } catch {
+      setState((currentState) => ({
+        ...currentState,
+        submitting: false,
+        revokingInviteId: null,
+        error: "招待作成APIへの接続に失敗しました。",
+        successMessage: "",
+      }));
+      return;
+    }
+
+    const result = (await response.json().catch(() => null)) as CreatedInviteResponse | null;
+
+    if (!response.ok || !result?.invite || !result.initialPassword) {
+      setState((currentState) => ({
+        ...currentState,
+        submitting: false,
+        revokingInviteId: null,
+        error: `招待の作成に失敗しました: ${
+          result?.error ?? "サーバーから正しい応答を受け取れませんでした。"
+        }`,
+        successMessage: "",
+      }));
+      return;
+    }
+
+    const createdInvite = result.invite;
+    const initialPassword = result.initialPassword;
+    const { data: invites, error: invitesError } = await fetchFamilyInvites();
 
     setInviteEmail("");
 
@@ -262,7 +319,11 @@ export default function FamilyInvitesPanel() {
         submitting: false,
         revokingInviteId: null,
         error: `招待は作成されましたが一覧の再取得に失敗しました: ${invitesError.message}`,
-        successMessage: "招待を作成しました。",
+        successMessage: "招待を作成しました。共有文に初期パスワードを含めて送れます。",
+        initialPasswordsByInviteId: {
+          ...currentState.initialPasswordsByInviteId,
+          [createdInvite.id]: initialPassword,
+        },
       }));
       return;
     }
@@ -272,7 +333,11 @@ export default function FamilyInvitesPanel() {
       submitting: false,
       revokingInviteId: null,
       error: "",
-      successMessage: "招待を作成しました。",
+      successMessage: "招待を作成しました。共有文に初期パスワードを含めて送れます。",
+      initialPasswordsByInviteId: {
+        ...currentState.initialPasswordsByInviteId,
+        [createdInvite.id]: initialPassword,
+      },
       invites: Array.isArray(invites) ? (invites as FamilyInvite[]) : [],
     }));
   };
@@ -307,11 +372,7 @@ export default function FamilyInvitesPanel() {
       return;
     }
 
-    const { data: invites, error: invitesError } = await supabase
-      .from("family_invites")
-      .select("id, email, role, status, created_at, expires_at")
-      .eq("family_id", state.membership.family_id)
-      .order("created_at", { ascending: false });
+    const { data: invites, error: invitesError } = await fetchFamilyInvites();
 
     if (invitesError) {
       setState((currentState) => ({
@@ -361,7 +422,25 @@ export default function FamilyInvitesPanel() {
 
   const handleCopyShareText = async (inviteId: string) => {
     const inviteUrl = `${window.location.origin}/invites/${inviteId}`;
-    const shareText = `family-money-app への招待です。\n以下のリンクを開いて参加してください。\n${inviteUrl}`;
+    const invite = state.invites.find((candidate) => candidate.id === inviteId);
+    const initialPassword = state.initialPasswordsByInviteId[inviteId];
+    const shareText = initialPassword
+      ? [
+          "家族マネーアプリ「ファミマネ」への招待です。",
+          "",
+          `ログインメール: ${invite?.email ?? ""}`,
+          `初期パスワード: ${initialPassword}`,
+          `招待リンク: ${inviteUrl}`,
+          "",
+          "初回ログイン後に新しいパスワードを設定してください。",
+        ].join("\n")
+      : [
+          "家族マネーアプリ「ファミマネ」への招待です。",
+          "以下のリンクを開いて参加してください。",
+          inviteUrl,
+          "",
+          "初期パスワードが必要な場合は、招待を作成した人に確認してください。",
+        ].join("\n");
 
     try {
       await navigator.clipboard.writeText(shareText);
@@ -392,11 +471,15 @@ export default function FamilyInvitesPanel() {
       return true;
     }
 
-    return invite.status === inviteFilter;
+    return invite.effective_status === inviteFilter;
   });
 
-  const pendingCount = state.invites.filter((invite) => invite.status === "pending").length;
-  const acceptedCount = state.invites.filter((invite) => invite.status === "accepted").length;
+  const pendingCount = state.invites.filter((invite) => invite.effective_status === "pending").length;
+  const acceptedCount = state.invites.filter((invite) => invite.effective_status === "accepted").length;
+
+  if (!state.loading && state.membership?.role !== "guardian_admin") {
+    return null;
+  }
 
   return (
     <SectionCard
@@ -411,11 +494,12 @@ export default function FamilyInvitesPanel() {
           description="先に家族へ入ると、ここから招待できます。"
         />
       ) : (
-        <div className="grid gap-5 xl:grid-cols-[0.86fr_1.14fr]">
+        <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[0.78fr_1.22fr] xl:items-start">
           <div className="space-y-4">
             {state.membership.role === "guardian_admin" ? (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-[28px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] p-4 shadow-[0_14px_30px_rgba(49,76,120,0.08)]">
-                <div className="rounded-[24px] border border-[rgba(111,149,229,0.14)] bg-[linear-gradient(180deg,rgba(234,242,255,0.98),rgba(255,255,255,0.95))] px-4 py-4">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-[28px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] p-4 shadow-[0_14px_30px_rgba(51,101,63,0.08)]">
+                <div className="rounded-[24px] border border-[rgba(76,163,104,0.14)] bg-[linear-gradient(180deg,rgba(230,245,233,0.98),rgba(255,255,255,0.95))] px-4 py-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-secondary)]">招待を出せる人</p>
@@ -463,27 +547,19 @@ export default function FamilyInvitesPanel() {
               />
             )}
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-[24px] bg-[var(--surface-soft)] px-4 py-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[20px] bg-[var(--surface-soft)] px-4 py-3">
                 <p className="text-sm font-semibold text-[var(--text-secondary)]">承認待ちの招待</p>
-                <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{pendingCount}</p>
+                <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">{pendingCount}</p>
               </div>
-              <div className="rounded-[24px] bg-[var(--surface-accent)] px-4 py-4">
+              <div className="rounded-[20px] bg-[var(--surface-accent)] px-4 py-3">
                 <p className="text-sm font-semibold text-[var(--text-secondary)]">参加済みの招待</p>
-                <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{acceptedCount}</p>
+                <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">{acceptedCount}</p>
               </div>
             </div>
           </div>
 
-          {state.successMessage ? (
-            <p className="mt-4 text-sm text-[var(--success)]">{state.successMessage}</p>
-          ) : null}
-
-          {state.error ? (
-            <p className="mt-4 text-sm text-[var(--danger)]">{state.error}</p>
-          ) : null}
-
-          <div className="space-y-4 rounded-[28px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] p-4 shadow-[0_14px_30px_rgba(49,76,120,0.08)]">
+          <div className="space-y-4 rounded-[28px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] p-4 shadow-[0_14px_30px_rgba(51,101,63,0.08)]">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h3 className="text-xl font-bold text-[var(--text-primary)]">招待一覧</h3>
@@ -496,6 +572,14 @@ export default function FamilyInvitesPanel() {
                 <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">{filteredInvites.length}件</p>
               </div>
             </div>
+
+            {state.successMessage ? (
+              <p className="text-sm text-[var(--success)]">{state.successMessage}</p>
+            ) : null}
+
+            {state.error ? (
+              <p className="text-sm text-[var(--danger)]">{state.error}</p>
+            ) : null}
 
             <div className="flex flex-wrap gap-2">
               {(["all", "pending", "accepted", "revoked", "expired"] as InviteFilter[]).map(
@@ -527,23 +611,23 @@ export default function FamilyInvitesPanel() {
                 {filteredInvites.map((invite) => (
                   <div
                     key={invite.id}
-                    className="overflow-hidden rounded-[26px] border border-[var(--border-soft)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(249,251,255,0.96))]"
+                    className="overflow-hidden rounded-[24px] border border-[var(--border-soft)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(249,251,255,0.96))]"
                   >
-                    <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-lg font-bold text-[var(--text-primary)]">
+                          <p className="text-base font-bold text-[var(--text-primary)] sm:text-lg">
                             {invite.email}
                           </p>
-                          <StatusBadge tone={inviteStatusTone(invite.status)}>
-                            {formatInviteStatus(invite.status)}
+                          <StatusBadge tone={inviteStatusTone(invite.effective_status)}>
+                            {formatInviteStatus(invite.effective_status)}
                           </StatusBadge>
                         </div>
                         <p className="mt-2 text-sm text-[var(--text-secondary)]">
                           招待する相手: {formatFamilyRole(invite.role)}
                         </p>
                       </div>
-                      <div className="rounded-[20px] bg-[var(--surface-accent)] px-4 py-3">
+                      <div className="rounded-[18px] bg-[var(--surface-accent)] px-3 py-2.5 lg:min-w-[180px]">
                         <p className="text-xs font-semibold tracking-wide text-[var(--text-secondary)]">有効期限</p>
                         <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                           {new Date(invite.expires_at).toLocaleString("ja-JP")}
@@ -551,29 +635,30 @@ export default function FamilyInvitesPanel() {
                       </div>
                     </div>
 
-                    <div className="grid gap-3 border-t border-[rgba(109,132,177,0.12)] bg-[rgba(242,246,255,0.54)] px-4 py-4 sm:grid-cols-[1fr_auto] sm:items-end">
-                      <div>
-                        <p className="text-xs font-semibold tracking-wide text-[var(--text-muted)]">
-                          作成日
+                    <div className="grid gap-3 border-t border-[rgba(84,130,95,0.12)] bg-[rgba(243,251,244,0.54)] px-4 py-3 lg:grid-cols-[1fr_auto] lg:items-center">
+                      <div className="min-w-0">
+                        <p className="text-xs text-[var(--text-muted)]">
+                          作成日: {new Date(invite.created_at).toLocaleString("ja-JP")}
                         </p>
-                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                          {new Date(invite.created_at).toLocaleString("ja-JP")}
-                        </p>
-                        {invite.status === "pending" ? (
-                          <p className="mt-3 text-sm text-[var(--text-secondary)]">
-                            招待リンク:
-                            <Link
-                              href={`/invites/${invite.id}`}
-                              className="ml-2 font-semibold text-[var(--brand-primary-strong)] underline underline-offset-2"
-                            >
-                              /invites/{invite.id}
-                            </Link>
-                          </p>
+                        {invite.effective_status === "pending" ? (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-sm font-medium text-[var(--brand-primary-strong)]">
+                              招待リンクを表示
+                            </summary>
+                            <div className="mt-2 text-sm text-[var(--text-secondary)] break-all">
+                              <Link
+                                href={`/invites/${invite.id}`}
+                                className="font-semibold text-[var(--brand-primary-strong)] underline underline-offset-2"
+                              >
+                                /invites/{invite.id}
+                              </Link>
+                            </div>
+                          </details>
                         ) : null}
                       </div>
 
-                      {invite.status === "pending" ? (
-                        <div className="flex flex-wrap items-center gap-2">
+                      {invite.effective_status === "pending" ? (
+                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                           <SecondaryButton
                             type="button"
                             size="sm"
@@ -619,6 +704,7 @@ export default function FamilyInvitesPanel() {
                 ))}
               </div>
             )}
+          </div>
           </div>
         </div>
       )}

@@ -94,7 +94,7 @@ export default function FamilyMembersList() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event) => {
+    } = supabase.auth.onAuthStateChange(() => {
       void loadMembers();
     });
 
@@ -111,7 +111,12 @@ export default function FamilyMembersList() {
     };
   }, []);
 
-  const guardianCount = state.members.filter((member) => member.role !== "child").length;
+  const guardianAdminCount = state.members.filter(
+    (member) => member.role === "guardian_admin"
+  ).length;
+  const guardianCount = state.members.filter(
+    (member) => member.role === "guardian"
+  ).length;
   const childCount = state.members.filter((member) => member.role === "child").length;
 
   return (
@@ -130,22 +135,26 @@ export default function FamilyMembersList() {
         />
       ) : (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[24px] bg-[var(--surface-accent)] px-4 py-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-[22px] bg-[var(--surface-accent)] px-4 py-3">
               <p className="text-sm font-semibold text-[var(--text-secondary)]">家族メンバー</p>
-              <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{state.members.length}</p>
+              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{state.members.length}</p>
             </div>
-            <div className="rounded-[24px] bg-[var(--surface-accent)] px-4 py-4">
+            <div className="rounded-[22px] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-sm font-semibold text-[var(--text-secondary)]">家族管理者</p>
+              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{guardianAdminCount}</p>
+            </div>
+            <div className="rounded-[22px] bg-[rgba(243,251,244,0.92)] px-4 py-3">
               <p className="text-sm font-semibold text-[var(--text-secondary)]">親・祖父母</p>
-              <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{guardianCount}</p>
+              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{guardianCount}</p>
             </div>
-            <div className="rounded-[24px] bg-[var(--surface-pink)] px-4 py-4">
+            <div className="rounded-[22px] bg-[var(--surface-pink)] px-4 py-3">
               <p className="text-sm font-semibold text-[var(--text-secondary)]">子供</p>
-              <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">{childCount}</p>
+              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{childCount}</p>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3">
             {state.members.map((member) => {
               const isCurrentUser = member.user_id === currentUserId;
               const memberInitial = member.display_label.slice(0, 1);
@@ -153,19 +162,19 @@ export default function FamilyMembersList() {
               return (
                 <div
                   key={member.user_id}
-                  className={`overflow-hidden rounded-[28px] border bg-[var(--surface-card-strong)] p-4 shadow-[0_14px_30px_rgba(49,76,120,0.08)] ${
+                  className={`overflow-hidden rounded-[26px] border bg-[var(--surface-card-strong)] p-4 shadow-[0_10px_22px_rgba(51,101,63,0.08)] ${
                     isCurrentUser
-                      ? "border-[rgba(111,149,229,0.28)]"
+                      ? "border-[rgba(76,163,104,0.28)]"
                       : "border-[var(--border-soft)]"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-[var(--surface-accent)] text-xl font-bold text-[var(--brand-primary-strong)]">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-[var(--surface-accent)] text-lg font-bold text-[var(--brand-primary-strong)]">
                         {memberInitial}
                       </div>
                       <div>
-                        <p className="text-lg font-bold text-[var(--text-primary)]">
+                        <p className="text-base font-bold text-[var(--text-primary)] sm:text-lg">
                           {member.display_label}
                           {isCurrentUser ? "（あなた）" : ""}
                         </p>
@@ -179,25 +188,27 @@ export default function FamilyMembersList() {
                     </StatusBadge>
                   </div>
 
-                  <div className="mt-4 rounded-[22px] border border-[rgba(111,149,229,0.14)] bg-[linear-gradient(180deg,rgba(234,242,255,0.96),rgba(253,244,223,0.92))] px-4 py-4">
-                    <p className="text-sm font-semibold text-[var(--text-secondary)]">この家族での役わり</p>
-                    <p className="mt-2 text-lg font-bold text-[var(--text-primary)]">{formatFamilyRole(member.role)}</p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
+                    <div className="rounded-[20px] border border-[rgba(76,163,104,0.14)] bg-[linear-gradient(180deg,rgba(230,245,233,0.96),rgba(253,244,223,0.92))] px-4 py-3">
+                      <p className="text-sm font-semibold text-[var(--text-secondary)]">この家族での役わり</p>
+                      <p className="mt-1 text-base font-bold text-[var(--text-primary)]">{formatFamilyRole(member.role)}</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                       {member.role === "child"
                         ? "お金の学びをいっしょに進めるメンバーです。"
                         : "家族の準備や招待を支えるメンバーです。"}
-                    </p>
-                  </div>
+                      </p>
+                    </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {isCurrentUser ? (
-                      <span className="inline-flex rounded-full bg-[var(--surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--text-primary)]">
-                        利用中のアカウント
+                    <div className="flex flex-wrap gap-2 md:max-w-[220px] md:justify-end">
+                      {isCurrentUser ? (
+                        <span className="inline-flex rounded-full bg-[var(--surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--text-primary)]">
+                          利用中のアカウント
+                        </span>
+                      ) : null}
+                      <span className="inline-flex rounded-full bg-[rgba(243,251,244,0.92)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                        メンバー番号: {member.user_id.slice(0, 8)}
                       </span>
-                    ) : null}
-                    <span className="inline-flex rounded-full bg-[rgba(242,246,255,0.92)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                      メンバー番号: {member.user_id.slice(0, 8)}
-                    </span>
+                    </div>
                   </div>
                 </div>
               );

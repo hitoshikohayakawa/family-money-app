@@ -1,27 +1,58 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 function mapAuthErrorMessage(message: string) {
-  if (message.toLowerCase().includes("email rate limit exceeded")) {
-    return "メール送信回数の上限に達しました。少し時間を空けてから、もう一度お試しください。";
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("invalid login credentials") ||
+    normalizedMessage.includes("invalid_grant")
+  ) {
+    return "メールアドレスまたはパスワードが違います。";
   }
 
   return message;
 }
 
-export default function LoginPage() {
+function normalizeNextPath(nextPath: string | null) {
+  if (!nextPath || !nextPath.startsWith("/")) {
+    return "/";
+  }
+
+  return nextPath;
+}
+
+function normalizeEmail(email: string | null) {
+  return email?.trim().toLowerCase() ?? "";
+}
+
+function LoginPageContent() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  const searchParams = useSearchParams();
+  const nextPath = useMemo(
+    () => normalizeNextPath(searchParams.get("next")),
+    [searchParams]
+  );
+  const initialEmail = useMemo(
+    () => normalizeEmail(searchParams.get("email")),
+    [searchParams]
+  );
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
   useEffect(() => {
     let isActive = true;
+
+    const getDestination = (requiresPasswordSetup: boolean) =>
+      requiresPasswordSetup
+        ? `/setup-password?next=${encodeURIComponent(nextPath)}`
+        : nextPath;
 
     const checkSession = async () => {
       const { data, error } = await supabase.auth.getSession();
@@ -35,18 +66,26 @@ export default function LoginPage() {
         return;
       }
 
-      if (data.session) {
-        router.replace("/");
+      const user = data.session?.user;
+
+      if (user) {
+        router.replace(
+          getDestination(Boolean(user.user_metadata?.requires_password_setup))
+        );
       }
     };
 
-    checkSession();
+    void checkSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        router.replace("/");
+      const user = session?.user;
+
+      if (user) {
+        router.replace(
+          getDestination(Boolean(user.user_metadata?.requires_password_setup))
+        );
       }
     });
 
@@ -54,62 +93,34 @@ export default function LoginPage() {
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [router]);
-
-  useEffect(() => {
-    if (cooldownSeconds === 0) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setCooldownSeconds((currentSeconds) => {
-        if (currentSeconds <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-
-        return currentSeconds - 1;
-      });
-    }, 1000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [cooldownSeconds]);
+  }, [nextPath, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (cooldownSeconds > 0) {
-      return;
-    }
-
     setIsSubmitting(true);
-    setMessage("");
     setErrorMessage("");
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/login`,
-      },
+      password,
     });
 
     if (error) {
       setErrorMessage(mapAuthErrorMessage(error.message));
-      if (error.message.toLowerCase().includes("email rate limit exceeded")) {
-        setCooldownSeconds(60);
-      }
       setIsSubmitting(false);
       return;
     }
 
-    setMessage(
-      "確認メールを送信しました。メール内のリンクを開くとトップページへ戻ります。"
+    const requiresPasswordSetup = Boolean(
+      data.user?.user_metadata?.requires_password_setup
     );
-    setCooldownSeconds(60);
-    setEmail("");
-    setIsSubmitting(false);
+
+    router.replace(
+      requiresPasswordSetup
+        ? `/setup-password?next=${encodeURIComponent(nextPath)}`
+        : nextPath
+    );
   };
 
   return (
@@ -119,7 +130,7 @@ export default function LoginPage() {
           ログイン
         </h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          メールアドレスを入力すると、ログイン用の magic link を送信します。
+          ※招待を受け取った方はメールに記載されたパスワードで初回ログインを行ってください。
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
@@ -135,22 +146,45 @@ export default function LoginPage() {
             />
           </label>
 
+          <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            パスワード
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="6文字以上"
+              className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+              required
+              minLength={6}
+            />
+          </label>
+
           <button
             type="submit"
-            disabled={isSubmitting || cooldownSeconds > 0}
+            disabled={isSubmitting}
             className="rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-300"
           >
-            {isSubmitting
-              ? "送信中..."
-              : cooldownSeconds > 0
-                ? `${cooldownSeconds}秒待って再送`
-                : "magic link を送信"}
+            {isSubmitting ? "ログイン中..." : "ログイン"}
           </button>
         </form>
 
-        {message ? (
-          <p className="mt-4 text-sm text-green-600 dark:text-green-400">{message}</p>
-        ) : null}
+        <div className="mt-5 flex flex-col gap-2 text-sm">
+          <Link
+            href={`/forgot-password?next=${encodeURIComponent(nextPath)}`}
+            className="text-zinc-700 underline underline-offset-4 dark:text-zinc-300"
+          >
+            パスワードを忘れた方はこちら
+          </Link>
+          <Link
+            href={`/register?next=${encodeURIComponent(nextPath)}`}
+            className="text-zinc-700 underline underline-offset-4 dark:text-zinc-300"
+          >
+            新規登録はこちら
+          </Link>
+          <p className="text-zinc-500 dark:text-zinc-400">
+            既存アカウントで初回パスワードが未設定の場合は、管理者に初期パスワード設定を依頼してください。
+          </p>
+        </div>
 
         {errorMessage ? (
           <p className="mt-4 text-sm text-red-600 dark:text-red-400">
@@ -159,5 +193,13 @@ export default function LoginPage() {
         ) : null}
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-black"><p className="text-sm text-zinc-600 dark:text-zinc-400">読み込み中です。</p></div>}>
+      <LoginPageContent />
+    </Suspense>
   );
 }
