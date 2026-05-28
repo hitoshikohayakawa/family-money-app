@@ -128,7 +128,7 @@ type PriceRefreshInfo = {
   message?: string;
 };
 
-type InvestmentCategoryCode = "index_stock" | "single_stock" | "resource";
+type InvestmentCategoryCode = "index_stock" | "single_stock" | "resource" | "crypto";
 
 type InvestmentCategory = {
   code: InvestmentCategoryCode;
@@ -159,12 +159,21 @@ const investmentCategories: InvestmentCategory[] = [
   },
   {
     code: "resource",
-    name: "資源",
+    name: "現物・資源",
     description:
-      "金や原油などの資源に関係するジャンルです。世界の出来事や景気で動きやすい特徴があります。",
-    elementaryName: "しげん",
+      "金や銀などの現物資産や、資源に関係するジャンルです。世界の出来事や景気で動きやすい特徴があります。",
+    elementaryName: "げんぶつ・しげん",
     elementaryDescription:
-      "きんや げんゆなどの しげんに かんけいする ジャンルです。せかいのできごとで うごきやすい とくちょうが あります。",
+      "きんや ぎんなどの げんぶつしさんや、しげんに かんけいする ジャンルです。せかいのできごとで うごきやすい とくちょうが あります。",
+  },
+  {
+    code: "crypto",
+    name: "仮想通貨",
+    description:
+      "インターネット上でやりとりされるデジタル資産のジャンルです。値動きが大きい特徴があります。",
+    elementaryName: "かそうつうか",
+    elementaryDescription:
+      "ネットの うえで やりとりされる デジタルの しさんです。ねだんの うごきが おおきい とくちょうが あります。",
   },
 ];
 
@@ -435,19 +444,23 @@ function RubyText({
 function ChoiceModal({
   title,
   children,
+  footer,
+  contentClassName = "",
   onClose,
 }: {
   title: RubyToken[];
   children: ReactNode;
+  footer?: ReactNode;
+  contentClassName?: string;
   onClose: () => void;
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(16,28,54,0.36)] px-4 py-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(16,28,54,0.36)] px-4 py-4 sm:px-4 sm:py-6"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-xl rounded-[32px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] p-5 shadow-[0_24px_70px_rgba(26,44,82,0.28)]">
+      <div className="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-[32px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] p-4 shadow-[0_24px_70px_rgba(26,44,82,0.28)] sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <h3 className="text-xl font-bold leading-9 text-[var(--text-primary)]">
             <RubyText tokens={title} />
@@ -460,7 +473,14 @@ function ChoiceModal({
             とじる
           </button>
         </div>
-        <div className="mt-4">{children}</div>
+        <div className={`mt-4 min-h-0 flex-1 overflow-y-auto pr-1 ${contentClassName}`}>
+          {children}
+        </div>
+        {footer ? (
+          <div className="mt-4 border-t border-[var(--border-soft)] bg-[var(--surface-card-strong)] pt-4">
+            {footer}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -586,6 +606,14 @@ function formatDateTimeLabel(value: string) {
   });
 }
 
+function formatGrantDateLabel(value: string) {
+  return new Date(value).toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+}
+
 function getPriceRefreshTone(info: PriceRefreshInfo) {
   if (info.status === "failed") {
     return "border-[rgba(239,172,192,0.4)] bg-[rgba(255,239,245,0.9)]";
@@ -680,6 +708,7 @@ export default function AllowanceGrantsPanel({
     Record<string, string>
   >({});
   const [selectedCashoutGrantIds, setSelectedCashoutGrantIds] = useState<string[]>([]);
+  const [expandedInvestmentGrantIds, setExpandedInvestmentGrantIds] = useState<string[]>([]);
   const [pendingChoice, setPendingChoice] = useState<PendingChoice>(null);
   const [activePage, setActivePage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
@@ -1148,6 +1177,14 @@ export default function AllowanceGrantsPanel({
     );
   };
 
+  const toggleExpandedInvestmentGrant = (grantId: string) => {
+    setExpandedInvestmentGrantIds((currentValue) =>
+      currentValue.includes(grantId)
+        ? currentValue.filter((id) => id !== grantId)
+        : [...currentValue, grantId]
+    );
+  };
+
   const executeRequestCashout = async () => {
     if (selectedCashoutGrantIds.length === 0) {
       setState((currentState) => ({
@@ -1474,60 +1511,68 @@ export default function AllowanceGrantsPanel({
             </div>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[22px] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">未選択のお小遣い</p>
-              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{pendingCount}</p>
-            </div>
-            <div className="rounded-[22px] bg-[var(--surface-accent)] px-4 py-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--text-secondary)]">
-                    今子供が貯めているお小遣い総額
-                  </p>
-                  <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">
-                    {formatCurrency(totalMarketValue)}
-                  </p>
-                </div>
-                <div className="rounded-[18px] bg-[rgba(255,255,255,0.68)] px-4 py-3 text-right">
-                  <p className="text-xs font-semibold text-[var(--text-muted)]">評価損益</p>
-                  <p className={`mt-1 text-xl font-bold ${totalInvestmentGainTone}`}>
-                    {totalInvestmentGainSign}
-                    {formatCurrency(totalInvestmentGain)}
-                  </p>
-                  <p className={`mt-0.5 text-sm font-semibold ${totalInvestmentGainTone}`}>
-                    {totalInvestmentGainSign}
-                    {formatGainRate(totalInvestmentGainRate)}%
-                  </p>
-                </div>
+          {!isChild ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[22px] bg-[var(--surface-soft)] px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">
+                  未選択のお小遣い
+                </p>
+                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
+                  {pendingCount}
+                </p>
               </div>
-            </div>
-            {canCreateGrant ? (
-              <div className="rounded-[22px] bg-[linear-gradient(135deg,rgba(230,247,238,0.96),rgba(243,251,244,0.96))] px-4 py-3 sm:col-span-2">
+              <div className="rounded-[22px] bg-[var(--surface-accent)] px-4 py-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-[var(--text-secondary)]">
-                      支払い済みのお小遣い総額
+                      今子供が貯めているお小遣い総額
                     </p>
                     <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">
-                      {formatCurrency(paidTotal)}
+                      {formatCurrency(totalMarketValue)}
                     </p>
                   </div>
-                  <div className="rounded-[18px] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-right">
-                    <p className="text-xs font-semibold text-[var(--text-muted)]">支払い時の損益</p>
-                    <p className={`mt-1 text-xl font-bold ${paidGainTone}`}>
-                      {paidGainSign}
-                      {formatCurrency(paidGain)}
+                  <div className="rounded-[18px] bg-[rgba(255,255,255,0.68)] px-4 py-3 text-right">
+                    <p className="text-xs font-semibold text-[var(--text-muted)]">評価損益</p>
+                    <p className={`mt-1 text-xl font-bold ${totalInvestmentGainTone}`}>
+                      {totalInvestmentGainSign}
+                      {formatCurrency(totalInvestmentGain)}
                     </p>
-                    <p className={`mt-0.5 text-sm font-semibold ${paidGainTone}`}>
-                      {paidGainSign}
-                      {formatGainRate(paidGainRate)}%
+                    <p className={`mt-0.5 text-sm font-semibold ${totalInvestmentGainTone}`}>
+                      {totalInvestmentGainSign}
+                      {formatGainRate(totalInvestmentGainRate)}%
                     </p>
                   </div>
                 </div>
               </div>
-            ) : null}
-          </div>
+              {canCreateGrant ? (
+                <div className="rounded-[22px] bg-[linear-gradient(135deg,rgba(230,247,238,0.96),rgba(243,251,244,0.96))] px-4 py-3 sm:col-span-2">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-secondary)]">
+                        支払い済みのお小遣い総額
+                      </p>
+                      <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">
+                        {formatCurrency(paidTotal)}
+                      </p>
+                    </div>
+                    <div className="rounded-[18px] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-right">
+                      <p className="text-xs font-semibold text-[var(--text-muted)]">
+                        支払い時の損益
+                      </p>
+                      <p className={`mt-1 text-xl font-bold ${paidGainTone}`}>
+                        {paidGainSign}
+                        {formatCurrency(paidGain)}
+                      </p>
+                      <p className={`mt-0.5 text-sm font-semibold ${paidGainTone}`}>
+                        {paidGainSign}
+                        {formatGainRate(paidGainRate)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           {canCreateGrant ? (
             <form
@@ -1613,31 +1658,6 @@ export default function AllowanceGrantsPanel({
 
           {state.error ? (
             <p className="text-sm text-[var(--danger)]">{state.error}</p>
-          ) : null}
-
-          {viewMode === "main" && isChild && cashoutReadyGrants.length > 0 ? (
-            <div className="rounded-[28px] border border-[rgba(76,163,104,0.18)] bg-[rgba(243,251,244,0.72)] p-4">
-              <p className="text-base font-bold text-[var(--text-primary)]">
-                引き出す投資を選ぶ
-              </p>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                チェックした投資分を、親へ受け取り申請できます。
-              </p>
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  選択中: {formatCurrency(selectedCashoutTotal)}
-                </p>
-                <PrimaryButton
-                  type="button"
-                  size="sm"
-                  fullWidth={false}
-                  onClick={() => setPendingChoice({ type: "cashout_confirm" })}
-                  disabled={state.requestingCashout || selectedCashoutGrantIds.length === 0}
-                >
-                  {state.requestingCashout ? "申請中..." : "チェックしたものを引き出す"}
-                </PrimaryButton>
-              </div>
-            </div>
           ) : null}
 
           {viewMode === "main" && !isChild && activeGrants.length === 0 ? (
@@ -1935,6 +1955,28 @@ export default function AllowanceGrantsPanel({
 
           {viewMode === "main" && isChild ? (
             <div className="space-y-5">
+              <div className="rounded-[28px] border border-[rgba(76,163,104,0.18)] bg-[linear-gradient(145deg,rgba(233,248,239,0.98),rgba(255,255,255,0.98))] p-5 shadow-[0_16px_36px_rgba(51,101,63,0.1)]">
+                <p className="text-sm font-bold tracking-[0.04em] text-[var(--text-secondary)]">
+                  {isElementaryChildMode ? "いまの おこづかい" : "いまのお小遣い"}
+                </p>
+                <p className="mt-2 text-[2.6rem] font-black leading-none text-[var(--text-primary)]">
+                  {formatCurrency(totalMarketValue)}
+                </p>
+                <div className="mt-4 rounded-[20px] bg-white/75 px-4 py-3">
+                  <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
+                    {isElementaryChildMode ? "ふえた・へった" : "ふえた・へった"}
+                  </p>
+                  <p className={`mt-1 text-2xl font-black ${totalInvestmentGainTone}`}>
+                    {totalInvestmentGainSign}
+                    {formatCurrency(totalInvestmentGain)}
+                  </p>
+                  <p className={`mt-1 text-base font-bold ${totalInvestmentGainTone}`}>
+                    {totalInvestmentGainSign}
+                    {formatGainRate(totalInvestmentGainRate)}%
+                  </p>
+                </div>
+              </div>
+
               {childPendingGrants.length === 0 && childInvestedGrants.length === 0 ? (
                 <EmptyState
                   title={isElementaryChildMode ? "まだ おこづかいが ありません" : "まだお小遣いがありません"}
@@ -1948,151 +1990,157 @@ export default function AllowanceGrantsPanel({
 
               {childPendingGrants.length > 0 ? (
                 <div className="space-y-3">
-                  <div>
+                  <div className="rounded-[24px] border border-[rgba(241,201,116,0.28)] bg-[linear-gradient(145deg,rgba(255,249,235,0.98),rgba(255,255,255,0.98))] p-4 shadow-[0_14px_30px_rgba(188,148,61,0.08)]">
                     <p className="text-xl font-extrabold text-[var(--text-primary)]">
-                      <RubyText
-                        tokens={
-                          isElementaryChildMode
-                            ? [{ text: "まだ えらんでいないもの" }]
-                            : [
-                                { text: "まだ" },
-                                { text: "選択", reading: "せんたく" },
-                                { text: "していないもの" },
-                              ]
-                        }
-                      />
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
                       {isElementaryChildMode
-                        ? "いま もらうか、とうしするかを まだ きめていない おこづかいです。"
-                        : "いま受け取るか、投資するかをまだ決めていないお小遣いです。"}
+                        ? "まだ やっていないこと"
+                        : "まだやっていないこと"}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                      {isElementaryChildMode
+                        ? `まだ やることを きめていない おこづかいが ${pendingCount}けん あります。`
+                        : `まだやることを決めていないお小遣いが${pendingCount}件あります。`}
                     </p>
                   </div>
                   <div className="grid gap-3">
                     {childPendingGrants.map((grant) => (
                       <div
                         key={grant.id}
-                        className="overflow-hidden rounded-[24px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] shadow-[0_10px_22px_rgba(51,101,63,0.08)]"
+                        className="overflow-hidden rounded-[22px] border border-[rgba(241,201,116,0.22)] bg-white shadow-[0_10px_22px_rgba(188,148,61,0.08)]"
                       >
-                        <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-[var(--text-secondary)]">
-                              {isElementaryChildMode ? "あなたへの おこづかい" : "あなたへのお小遣い"}
-                            </p>
-                            <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">
-                              {formatCurrency(grant.amount_jpy)}
-                            </p>
-                            {grant.note ? (
-                              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                                {grant.note}
+                        <div className="px-4 py-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                                {isElementaryChildMode ? "おこづかい" : "お小遣い"}
                               </p>
-                            ) : null}
+                              <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
+                                {formatCurrency(grant.amount_jpy)}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                                {isElementaryChildMode ? "もらった ひ" : "付与日"}
+                              </p>
+                              <p className="mt-1 text-sm font-bold text-[var(--text-primary)]">
+                                {formatGrantDateLabel(grant.granted_at)}
+                              </p>
+                            </div>
                           </div>
-                          <StatusBadge tone={decisionStatusTone(grant.decision_status)}>
-                            {formatDecisionStatus(grant.decision_status, isElementaryChildMode)}
-                          </StatusBadge>
-                        </div>
-
-                        <div className="border-t border-[rgba(84,130,95,0.12)] px-4 py-3">
-                          <div className="rounded-[20px] bg-[linear-gradient(180deg,rgba(253,244,223,0.96),rgba(255,255,255,0.94))] px-4 py-4">
-                            <p className="text-sm font-bold text-[var(--text-primary)]">
-                              <RubyText
-                                tokens={
-                                  isElementaryChildMode
-                                    ? [{ text: "この おこづかいを どうする？" }]
-                                    : [
-                                        { text: "このお" },
-                                        { text: "小遣", reading: "こづか" },
-                                        { text: "いをどうしますか？" },
-                                      ]
-                                }
-                              />
+                          {grant.note ? (
+                            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                              {grant.note}
                             </p>
-                            <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                              {isElementaryChildMode ? (
-                                "いま もらうか、とうしで ためるかを えらべます。"
-                              ) : (
-                                <RubyText
-                                  tokens={[
-                                    { text: "いま" },
-                                    { text: "受", reading: "う" },
-                                    { text: "け" },
-                                    { text: "取", reading: "と" },
-                                    { text: "るか、" },
-                                    { text: "投資", reading: "とうし" },
-                                    { text: "としてためるかを" },
-                                    { text: "選", reading: "えら" },
-                                    { text: "べます。" },
-                                  ]}
-                                />
-                              )}
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <PrimaryButton
-                                type="button"
-                                size="sm"
-                                fullWidth={false}
-                                onClick={() =>
-                                  setPendingChoice({ type: "immediate_cash", grantId: grant.id })
-                                }
-                                disabled={
-                                  state.requestingCashGrantId === grant.id ||
-                                  state.requestingInvestmentGrantId === grant.id
-                                }
-                              >
-                                {state.requestingCashGrantId === grant.id ? (
-                                  isElementaryChildMode ? "えらんでいます..." : "選択中..."
+                          ) : null}
+                          <div className="mt-4 grid grid-cols-2 gap-2">
+                            <PrimaryButton
+                              type="button"
+                              size="sm"
+                              fullWidth={false}
+                              onClick={() =>
+                                setPendingChoice({ type: "immediate_cash", grantId: grant.id })
+                              }
+                              disabled={
+                                state.requestingCashGrantId === grant.id ||
+                                state.requestingInvestmentGrantId === grant.id
+                              }
+                            >
+                              {state.requestingCashGrantId === grant.id ? (
+                                isElementaryChildMode ? "えらんでいます..." : "選択中..."
                                 ) : (
                                   <RubyText
                                     tokens={[
-                                      { text: isElementaryChildMode ? "すぐもらう" : "すぐにもらう" },
+                                      { text: "すぐもらう" },
                                     ]}
                                   />
                                 )}
                               </PrimaryButton>
-                              <SecondaryButton
-                                type="button"
-                                size="sm"
-                                onClick={() =>
-                                  setPendingChoice({
-                                    type: "investment_category_select",
-                                    grantId: grant.id,
-                                  })
-                                }
-                                disabled={
-                                  state.requestingCashGrantId === grant.id ||
-                                  state.requestingInvestmentGrantId === grant.id ||
-                                  state.investmentAssets.length === 0
-                                }
-                              >
-                                {state.requestingInvestmentGrantId === grant.id ? (
-                                  isElementaryChildMode ? "えらんでいます..." : "選択中..."
-                                ) : (
-                                  <RubyText
-                                    tokens={
-                                      isElementaryChildMode
-                                        ? [{ text: "とうしする" }]
-                                        : [
-                                            { text: "投資", reading: "とうし" },
-                                            { text: "する" },
-                                          ]
-                                    }
-                                  />
-                                )}
-                              </SecondaryButton>
-                            </div>
+                            <SecondaryButton
+                              type="button"
+                              size="sm"
+                              onClick={() =>
+                                setPendingChoice({
+                                  type: "investment_category_select",
+                                  grantId: grant.id,
+                                })
+                              }
+                              disabled={
+                                state.requestingCashGrantId === grant.id ||
+                                state.requestingInvestmentGrantId === grant.id ||
+                                state.investmentAssets.length === 0
+                              }
+                            >
+                              {state.requestingInvestmentGrantId === grant.id ? (
+                                isElementaryChildMode ? "えらんでいます..." : "選択中..."
+                              ) : (
+                                <RubyText
+                                  tokens={
+                                    isElementaryChildMode
+                                      ? [{ text: "とうしする" }]
+                                      : [
+                                          { text: "投資", reading: "とうし" },
+                                          { text: "する" },
+                                        ]
+                                  }
+                                />
+                              )}
+                            </SecondaryButton>
                           </div>
-                        </div>
-
-                        <div className="grid gap-2 border-t border-[rgba(84,130,95,0.12)] bg-[rgba(243,251,244,0.54)] px-4 py-3 text-sm text-[var(--text-secondary)] sm:grid-cols-2">
-                          <p>付与日: {new Date(grant.granted_at).toLocaleDateString("ja-JP")}</p>
-                          <p>作成者: {grant.granted_by_display_label}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="rounded-[22px] border border-[rgba(76,163,104,0.14)] bg-[rgba(243,251,244,0.72)] px-4 py-4">
+                  <p className="text-lg font-bold text-[var(--text-primary)]">
+                    {isElementaryChildMode
+                      ? "まだ やっていないこと"
+                      : "まだやっていないこと"}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    {isElementaryChildMode
+                      ? "いまは ぜんぶ きめているよ。"
+                      : "いまはやることを決めていないお小遣いはありません。"}
+                  </p>
+                </div>
+              )}
+
+              <div className="rounded-[24px] border border-[rgba(76,163,104,0.18)] bg-[rgba(243,251,244,0.72)] p-4">
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {isElementaryChildMode ? "ひきだす とうしを えらぶ" : "引き出す投資を選ぶ"}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                  {isElementaryChildMode
+                    ? "チェックした とうしぶんを、おやへ うけとりの おねがいに できます。"
+                    : "チェックした投資分を、親へ受け取り申請できます。"}
+                </p>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
+                      {isElementaryChildMode ? "えらんでいる きんがく" : "選択中の金額"}
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
+                      {formatCurrency(selectedCashoutTotal)}
+                    </p>
+                  </div>
+                  <PrimaryButton
+                    type="button"
+                    size="sm"
+                    fullWidth={false}
+                    onClick={() => setPendingChoice({ type: "cashout_confirm" })}
+                    disabled={state.requestingCashout || selectedCashoutGrantIds.length === 0}
+                  >
+                    {state.requestingCashout
+                      ? isElementaryChildMode
+                        ? "おねがい中..."
+                        : "申請中..."
+                      : isElementaryChildMode
+                        ? "えらんだ ものを ひきだす"
+                        : "チェックしたものを引き出す"}
+                  </PrimaryButton>
+                </div>
+              </div>
 
               {childInvestedGrants.length > 0 ? (
                 <div className="space-y-3">
@@ -2122,223 +2170,217 @@ export default function AllowanceGrantsPanel({
                         key={grant.id}
                         className="overflow-hidden rounded-[24px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] shadow-[0_10px_22px_rgba(51,101,63,0.08)]"
                       >
-                        <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-[var(--text-secondary)]">
-                              {isElementaryChildMode ? "あなたへの おこづかい" : "あなたへのお小遣い"}
-                            </p>
-                            <p className="mt-1 text-2xl font-bold text-[var(--text-primary)]">
-                              {formatCurrency(grant.amount_jpy)}
-                            </p>
-                            {grant.note ? (
-                              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                                {grant.note}
-                              </p>
-                            ) : null}
-                            {grant.decision_asset_name ? (
-                              <div className="mt-3 rounded-[20px] bg-[linear-gradient(180deg,rgba(76,163,104,0.14),rgba(76,163,104,0.08))] px-3 py-3 text-sm text-[var(--text-secondary)]">
-                                <p className="font-semibold text-[var(--brand-blue)]">
-                                  {isElementaryChildMode ? "とうしさき" : "投資先"}:{" "}
-                                  {grant.decision_asset_name}
-                                </p>
-                                <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                                  <div className="rounded-[18px] bg-[rgba(255,255,255,0.72)] px-3 py-3">
-                                    <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                      {isElementaryChildMode
-                                        ? "ねだんの うごき"
-                                        : "ファンド価格の変化"}
-                                    </p>
-                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                      <div>
-                                        <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                          {isElementaryChildMode
-                                            ? "はじめの ねだん"
-                                            : "取得した日の価格"}
-                                        </p>
-                                        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">
-                                          {grant.investment_unit_price_jpy !== null
-                                            ? formatCurrency(grant.investment_unit_price_jpy)
-                                            : "未取得"}
-                                        </p>
-                                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                          {grant.investment_price_date
-                                            ? new Date(grant.investment_price_date).toLocaleDateString(
-                                                "ja-JP"
-                                              )
-                                            : "価格日なし"}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                          {isElementaryChildMode ? "いまの ねだん" : "今の価格"}
-                                        </p>
-                                        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">
-                                          {grant.latest_unit_price_jpy !== null
-                                            ? formatCurrency(grant.latest_unit_price_jpy)
-                                            : "未取得"}
-                                        </p>
-                                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                          {grant.latest_price_date
-                                            ? new Date(grant.latest_price_date).toLocaleDateString(
-                                                "ja-JP"
-                                              )
-                                            : "価格日なし"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    {getGrantUnitPriceChange(grant) !== null &&
-                                    getGrantUnitPriceChangeRate(grant) !== null ? (
-                                      <div className="mt-3 rounded-[14px] border border-[rgba(84,130,95,0.12)] bg-[rgba(244,251,245,0.92)] px-3 py-2">
-                                        <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                          {isElementaryChildMode
-                                            ? "ねだんの ふえへり"
-                                            : "価格の増減"}
-                                        </p>
-                                        <p
-                                          className={`mt-1 text-lg font-bold ${
-                                            getGrantUnitPriceChange(grant)! >= 0
-                                              ? "text-[var(--success)]"
-                                              : "text-[var(--danger)]"
-                                          }`}
-                                        >
-                                          {formatSignedCurrency(getGrantUnitPriceChange(grant)!)}
-                                          {" / "}
-                                          {formatSignedPercent(
-                                            getGrantUnitPriceChangeRate(grant)!
-                                          )}
-                                        </p>
-                                      </div>
-                                    ) : null}
-                                  </div>
+                        {(() => {
+                          const isExpanded = expandedInvestmentGrantIds.includes(grant.id);
+                          const currentValue = grant.current_value_jpy ?? grant.amount_jpy;
+                          const gainTone =
+                            grant.unrealized_gain_jpy !== null && grant.unrealized_gain_jpy < 0
+                              ? "text-[var(--danger)]"
+                              : "text-[var(--success)]";
 
-                                  <div className="rounded-[18px] bg-[rgba(255,255,255,0.72)] px-3 py-3">
-                                    <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                      {isElementaryChildMode
-                                        ? "あなたのおかねの うごき"
-                                        : "あなたの投資の変化"}
-                                    </p>
-                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                      <div>
-                                        <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                          {isElementaryChildMode ? "いれた おかね" : "入れた金額"}
+                          return (
+                            <>
+                              <div className="px-4 py-4">
+                                <div className="flex items-start gap-3">
+                                  {isCashoutReadyInvestment(grant) ? (
+                                    <label className="mt-1 flex shrink-0 cursor-pointer items-center justify-center">
+                                      <input
+                                        type="checkbox"
+                                        className="h-6 w-6 rounded-md border border-[var(--border-soft)] accent-[var(--brand-blue)]"
+                                        checked={selectedCashoutGrantIds.includes(grant.id)}
+                                        onChange={() => toggleCashoutGrant(grant.id)}
+                                        aria-label={
+                                          isElementaryChildMode
+                                            ? "この とうしを ひきだすものに いれる"
+                                            : "この投資を引き出す候補に入れる"
+                                        }
+                                      />
+                                    </label>
+                                  ) : (
+                                    <div className="h-6 w-6 shrink-0" />
+                                  )}
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-[1.05rem] font-extrabold text-[var(--text-primary)]">
+                                        {grant.decision_asset_name ?? "投資先"}
+                                      </p>
+
+                                      <div className="mt-3 grid grid-cols-[auto_1fr] items-end gap-x-4 gap-y-2 rounded-[18px] bg-[rgba(244,251,245,0.72)] px-3 py-3">
+                                        <p className="text-[0.78rem] font-semibold text-[var(--text-secondary)]">
+                                          {isElementaryChildMode ? "いまの きんがく" : "現在の価格"}
                                         </p>
-                                        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">
-                                          {formatCurrency(grant.amount_jpy)}
+                                        <p className="text-right text-[2rem] font-black leading-none text-[var(--text-primary)]">
+                                          {formatCurrency(currentValue)}
                                         </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                          {isElementaryChildMode ? "いまの ねだん" : "今の評価額"}
+                                        <p className="text-[0.78rem] font-semibold text-[var(--text-secondary)]">
+                                          {isElementaryChildMode ? "ふえた・へった" : "増減金額"}
                                         </p>
-                                        <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">
-                                          {grant.current_value_jpy !== null
-                                            ? formatCurrency(grant.current_value_jpy)
+                                        <p className={`text-right text-base font-black ${gainTone}`}>
+                                          {grant.unrealized_gain_jpy !== null
+                                            ? formatSignedCurrency(grant.unrealized_gain_jpy)
                                             : "未取得"}
-                                        </p>
-                                        <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                          {isElementaryChildMode
-                                            ? "いちばん あたらしい ねだんで けいさん"
-                                            : "最新価格から計算"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    {grant.current_value_jpy !== null &&
-                                    grant.unrealized_gain_jpy !== null ? (
-                                      <div className="mt-3 rounded-[14px] border border-[rgba(84,130,95,0.12)] bg-[rgba(244,251,245,0.92)] px-3 py-2">
-                                        <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                          ふえた分・へった分
-                                        </p>
-                                        <p
-                                          className={`mt-1 text-lg font-bold ${
-                                            grant.unrealized_gain_jpy >= 0
-                                              ? "text-[var(--success)]"
-                                              : "text-[var(--danger)]"
-                                          }`}
-                                        >
-                                          {formatSignedCurrency(grant.unrealized_gain_jpy)}
                                           {grant.unrealized_gain_rate !== null
-                                            ? ` / ${formatSignedPercent(
-                                                grant.unrealized_gain_rate
-                                              )}`
+                                            ? ` (${formatSignedPercent(grant.unrealized_gain_rate)})`
                                             : ""}
                                         </p>
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        className="mt-3 flex w-full items-center justify-between rounded-[16px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-left text-sm font-semibold text-[var(--text-primary)]"
+                                        onClick={() => toggleExpandedInvestmentGrant(grant.id)}
+                                        aria-expanded={isExpanded}
+                                      >
+                                        <span>
+                                          {isExpanded
+                                            ? isElementaryChildMode
+                                              ? "くわしい じょうほうを とじる"
+                                              : "詳細を閉じる"
+                                            : isElementaryChildMode
+                                              ? "くわしい じょうほうを みる"
+                                              : "詳細を見る"}
+                                        </span>
+                                        <span className="text-base">{isExpanded ? "▲" : "▼"}</span>
+                                      </button>
+                                    </div>
+
+                                    {isExpanded ? (
+                                      <div className="mt-3 space-y-3 rounded-[18px] bg-[linear-gradient(180deg,rgba(76,163,104,0.14),rgba(76,163,104,0.08))] px-3 py-3 text-sm text-[var(--text-secondary)]">
+                                        {grant.note ? (
+                                          <div className="rounded-[14px] bg-white/70 px-3 py-3">
+                                            <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
+                                              {isElementaryChildMode ? "メモ" : "投資説明"}
+                                            </p>
+                                            <p className="mt-1 leading-6 text-[var(--text-primary)]">
+                                              {grant.note}
+                                            </p>
+                                          </div>
+                                        ) : null}
+
+                                        <div className="grid gap-3 lg:grid-cols-2">
+                                          <div className="rounded-[16px] bg-white/75 px-3 py-3">
+                                            <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
+                                              {isElementaryChildMode
+                                                ? "ねだんの くわしい ようす"
+                                                : "価格推移の詳細"}
+                                            </p>
+                                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                              <div>
+                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
+                                                  {isElementaryChildMode
+                                                    ? "もらった ひ"
+                                                    : "もらった年月日"}
+                                                </p>
+                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                                                  {formatGrantDateLabel(grant.granted_at)}
+                                                </p>
+                                              </div>
+                                              <div>
+                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
+                                                  {isElementaryChildMode
+                                                    ? "はじめの ねだん"
+                                                    : "取得した日の価格"}
+                                                </p>
+                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                                                  {grant.investment_unit_price_jpy !== null
+                                                    ? formatCurrency(grant.investment_unit_price_jpy)
+                                                    : "未取得"}
+                                                </p>
+                                                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                                  {grant.investment_price_date
+                                                    ? formatGrantDateLabel(grant.investment_price_date)
+                                                    : "価格日なし"}
+                                                </p>
+                                              </div>
+                                              <div>
+                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
+                                                  {isElementaryChildMode ? "いまの ねだん" : "現在の価格"}
+                                                </p>
+                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                                                  {grant.latest_unit_price_jpy !== null
+                                                    ? formatCurrency(grant.latest_unit_price_jpy)
+                                                    : "未取得"}
+                                                </p>
+                                                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                                  {grant.latest_price_date
+                                                    ? formatGrantDateLabel(grant.latest_price_date)
+                                                    : "価格日なし"}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          <div className="rounded-[16px] bg-white/75 px-3 py-3">
+                                            <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
+                                              {isElementaryChildMode
+                                                ? "あなたのおかねの くわしい ようす"
+                                                : "投資額の詳細"}
+                                            </p>
+                                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                              <div>
+                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
+                                                  {isElementaryChildMode
+                                                    ? "いれた おかね"
+                                                    : "入れた金額"}
+                                                </p>
+                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                                                  {formatCurrency(grant.amount_jpy)}
+                                                </p>
+                                              </div>
+                                              <div>
+                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
+                                                  {isElementaryChildMode
+                                                    ? "いまの ねだん"
+                                                    : "現在の評価額"}
+                                                </p>
+                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                                                  {formatCurrency(currentValue)}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="rounded-[16px] border border-[rgba(84,130,95,0.12)] bg-white/70 px-3 py-3">
+                                          <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
+                                            {isElementaryChildMode
+                                              ? "ほそく じょうほう"
+                                              : "その他の補足情報"}
+                                          </p>
+                                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                            <div>
+                                              <p className="text-xs font-semibold text-[var(--text-muted)]">
+                                                {isElementaryChildMode
+                                                  ? "さくせいした ひと"
+                                                  : "作成者"}
+                                              </p>
+                                              <p className="mt-1 font-semibold text-[var(--text-primary)]">
+                                                {grant.granted_by_display_label}
+                                              </p>
+                                            </div>
+                                            <div>
+                                              <p className="text-xs font-semibold text-[var(--text-muted)]">
+                                                {isElementaryChildMode
+                                                  ? "けいさんの もと"
+                                                  : "評価額の計算"}
+                                              </p>
+                                              <p className="mt-1 font-semibold text-[var(--text-primary)]">
+                                                {isElementaryChildMode
+                                                  ? "いちばん あたらしい ねだんを つかっています"
+                                                  : "最新価格を使って計算しています"}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                     ) : null}
                                   </div>
                                 </div>
-
-                                {grant.current_value_jpy !== null &&
-                                grant.unrealized_gain_jpy !== null ? (
-                                  <div className="mt-3 grid gap-2 rounded-[16px] border border-[rgba(84,130,95,0.12)] bg-[rgba(255,255,255,0.64)] px-3 py-3 sm:grid-cols-3">
-                                    <div>
-                                      <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                        {isElementaryChildMode ? "いまの ねだん" : "現在の評価額"}
-                                      </p>
-                                      <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
-                                        {formatCurrency(grant.current_value_jpy)}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                        {isElementaryChildMode ? "ふえたぶん / へったぶん" : "損益"}
-                                      </p>
-                                      <p
-                                        className={`mt-1 text-xl font-bold ${
-                                          grant.unrealized_gain_jpy >= 0
-                                            ? "text-[var(--success)]"
-                                            : "text-[var(--danger)]"
-                                        }`}
-                                      >
-                                        {formatSignedCurrency(grant.unrealized_gain_jpy)}
-                                        {grant.unrealized_gain_rate !== null
-                                          ? ` (${formatSignedPercent(
-                                              grant.unrealized_gain_rate
-                                            )})`
-                                          : ""}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                        {isElementaryChildMode
-                                          ? "もとの おかねとの ちがい"
-                                          : "元本との差"}
-                                      </p>
-                                      <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
-                                        {formatCurrency(grant.amount_jpy)}
-                                        {" → "}
-                                        {formatCurrency(grant.current_value_jpy)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                ) : null}
                               </div>
-                            ) : null}
-
-                            {isCashoutReadyInvestment(grant) ? (
-                              <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-[18px] border border-[rgba(76,163,104,0.16)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-sm font-semibold text-[var(--text-primary)]">
-                                <input
-                                  type="checkbox"
-                                  className="h-5 w-5 accent-[var(--brand-blue)]"
-                                  checked={selectedCashoutGrantIds.includes(grant.id)}
-                                  onChange={() => toggleCashoutGrant(grant.id)}
-                                />
-                                <span>
-                                  {isElementaryChildMode
-                                    ? "この とうしを ひきだすものに いれる"
-                                    : "この投資を引き出す候補に入れる"}
-                                </span>
-                              </label>
-                            ) : null}
-                          </div>
-                          <StatusBadge tone={decisionStatusTone(grant.decision_status)}>
-                            {formatDecisionStatus(grant.decision_status, isElementaryChildMode)}
-                          </StatusBadge>
-                        </div>
-
-                        <div className="grid gap-2 border-t border-[rgba(84,130,95,0.12)] bg-[rgba(243,251,244,0.54)] px-4 py-3 text-sm text-[var(--text-secondary)] sm:grid-cols-2">
-                          <p>付与日: {new Date(grant.granted_at).toLocaleDateString("ja-JP")}</p>
-                          <p>作成者: {grant.granted_by_display_label}</p>
-                        </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -2640,6 +2682,41 @@ export default function AllowanceGrantsPanel({
       {pendingChoice?.type === "investment_category_select" ? (
         <ChoiceModal
           title={investmentSelectTitle(isElementaryChildMode)}
+          footer={
+            <div className="grid gap-2 sm:grid-cols-2">
+              <PrimaryButton
+                type="button"
+                disabled={!selectedInvestmentCategory}
+                onClick={() => {
+                  if (!selectedInvestmentCategory) {
+                    return;
+                  }
+
+                  setPendingChoice({
+                    type: "investment_select",
+                    grantId: pendingChoice.grantId,
+                    categoryCode: selectedInvestmentCategory.code,
+                  });
+                }}
+              >
+                <RubyText
+                  tokens={
+                    isElementaryChildMode
+                      ? [{ text: "この ジャンルを みる" }]
+                      : [
+                          { text: "この" },
+                          { text: "ジャンルを" },
+                          { text: "見", reading: "み" },
+                          { text: "る" },
+                        ]
+                  }
+                />
+              </PrimaryButton>
+              <SecondaryButton type="button" onClick={() => setPendingChoice(null)}>
+                <RubyText tokens={cancelTokens()} />
+              </SecondaryButton>
+            </div>
+          }
           onClose={() => setPendingChoice(null)}
         >
           <div className="space-y-4">
@@ -2675,39 +2752,6 @@ export default function AllowanceGrantsPanel({
                 );
               })}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <PrimaryButton
-                type="button"
-                disabled={!selectedInvestmentCategory}
-                onClick={() => {
-                  if (!selectedInvestmentCategory) {
-                    return;
-                  }
-
-                  setPendingChoice({
-                    type: "investment_select",
-                    grantId: pendingChoice.grantId,
-                    categoryCode: selectedInvestmentCategory.code,
-                  });
-                }}
-              >
-                <RubyText
-                  tokens={
-                    isElementaryChildMode
-                      ? [{ text: "この ジャンルを みる" }]
-                      : [
-                          { text: "この" },
-                          { text: "ジャンルを" },
-                          { text: "見", reading: "み" },
-                          { text: "る" },
-                        ]
-                  }
-                />
-              </PrimaryButton>
-              <SecondaryButton type="button" onClick={() => setPendingChoice(null)}>
-                <RubyText tokens={cancelTokens()} />
-              </SecondaryButton>
-            </div>
           </div>
         </ChoiceModal>
       ) : null}
@@ -2715,6 +2759,51 @@ export default function AllowanceGrantsPanel({
       {pendingChoice?.type === "investment_select" ? (
         <ChoiceModal
           title={investmentAssetSelectTitle(isElementaryChildMode)}
+          footer={
+            <div className="grid gap-2 sm:grid-cols-2">
+              <PrimaryButton
+                type="button"
+                disabled={!selectedInvestmentAsset}
+                onClick={() => {
+                  if (!selectedInvestmentAsset) {
+                    return;
+                  }
+
+                  setPendingChoice({
+                    type: "investment_confirm",
+                    grantId: pendingChoice.grantId,
+                    assetId: selectedInvestmentAsset.asset_id,
+                    categoryCode: pendingChoice.categoryCode,
+                  });
+                }}
+              >
+                <RubyText
+                  tokens={
+                    isElementaryChildMode
+                      ? [{ text: "この とうしさきを えらぶ" }]
+                      : [
+                          { text: "この" },
+                          { text: "投資先", reading: "とうしさき" },
+                          { text: "を" },
+                          { text: "選", reading: "えら" },
+                          { text: "ぶ" },
+                        ]
+                  }
+                />
+              </PrimaryButton>
+              <SecondaryButton
+                type="button"
+                onClick={() =>
+                  setPendingChoice({
+                    type: "investment_category_select",
+                    grantId: pendingChoice.grantId,
+                  })
+                }
+              >
+                <RubyText tokens={backTokens()} />
+              </SecondaryButton>
+            </div>
+          }
           onClose={() => setPendingChoice(null)}
         >
           <div className="space-y-4">
@@ -2803,49 +2892,6 @@ export default function AllowanceGrantsPanel({
                 );
               })}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <PrimaryButton
-                type="button"
-                disabled={!selectedInvestmentAsset}
-                onClick={() => {
-                  if (!selectedInvestmentAsset) {
-                    return;
-                  }
-
-                  setPendingChoice({
-                    type: "investment_confirm",
-                    grantId: pendingChoice.grantId,
-                    assetId: selectedInvestmentAsset.asset_id,
-                    categoryCode: pendingChoice.categoryCode,
-                  });
-                }}
-              >
-                <RubyText
-                  tokens={
-                    isElementaryChildMode
-                      ? [{ text: "この とうしさきを えらぶ" }]
-                      : [
-                          { text: "この" },
-                          { text: "投資先", reading: "とうしさき" },
-                          { text: "を" },
-                          { text: "選", reading: "えら" },
-                          { text: "ぶ" },
-                        ]
-                  }
-                />
-              </PrimaryButton>
-              <SecondaryButton
-                type="button"
-                onClick={() =>
-                  setPendingChoice({
-                    type: "investment_category_select",
-                    grantId: pendingChoice.grantId,
-                  })
-                }
-              >
-                <RubyText tokens={backTokens()} />
-              </SecondaryButton>
-            </div>
           </div>
         </ChoiceModal>
       ) : null}
@@ -2853,6 +2899,35 @@ export default function AllowanceGrantsPanel({
       {pendingChoice?.type === "investment_confirm" && selectedModalAsset ? (
         <ChoiceModal
           title={investmentConfirmTitle(selectedModalAsset.asset_name, isElementaryChildMode)}
+          footer={
+            <div className="grid gap-2 sm:grid-cols-2">
+              <PrimaryButton
+                type="button"
+                onClick={() =>
+                  executeRequestInvestment(pendingChoice.grantId, pendingChoice.assetId)
+                }
+                disabled={state.requestingInvestmentGrantId === pendingChoice.grantId}
+              >
+                {state.requestingInvestmentGrantId === pendingChoice.grantId ? (
+                  "保存中..."
+                ) : (
+                  <RubyText tokens={yesTokens()} />
+                )}
+              </PrimaryButton>
+              <SecondaryButton
+                type="button"
+                onClick={() =>
+                  setPendingChoice({
+                    type: "investment_select",
+                    grantId: pendingChoice.grantId,
+                    categoryCode: pendingChoice.categoryCode,
+                  })
+                }
+              >
+                <RubyText tokens={backTokens()} />
+              </SecondaryButton>
+            </div>
+          }
           onClose={() => setPendingChoice(null)}
         >
           <div className="space-y-4">
@@ -2892,33 +2967,6 @@ export default function AllowanceGrantsPanel({
                   {formatAssetDailyChange(selectedModalAsset, isElementaryChildMode)}
                 </p>
               </div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <PrimaryButton
-                type="button"
-                onClick={() =>
-                  executeRequestInvestment(pendingChoice.grantId, pendingChoice.assetId)
-                }
-                disabled={state.requestingInvestmentGrantId === pendingChoice.grantId}
-              >
-                {state.requestingInvestmentGrantId === pendingChoice.grantId ? (
-                  "保存中..."
-                ) : (
-                  <RubyText tokens={yesTokens()} />
-                )}
-              </PrimaryButton>
-              <SecondaryButton
-                type="button"
-                onClick={() =>
-                  setPendingChoice({
-                    type: "investment_select",
-                    grantId: pendingChoice.grantId,
-                    categoryCode: pendingChoice.categoryCode,
-                  })
-                }
-              >
-                <RubyText tokens={backTokens()} />
-              </SecondaryButton>
             </div>
           </div>
         </ChoiceModal>

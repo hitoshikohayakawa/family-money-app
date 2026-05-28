@@ -74,6 +74,7 @@ begin
       when 'index_stock' then 1
       when 'single_stock' then 2
       when 'resource' then 3
+      when 'crypto' then 4
       else 99
     end,
     ia.created_at,
