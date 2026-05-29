@@ -30,7 +30,10 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/famimane_ogp.png",
+        width: 1733,
+        height: 907,
         alt: "ファミマネのOGP画像",
+        type: "image/png",
       },
     ],
   },
@@ -38,7 +41,14 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ファミマネ",
     description: "家族でたのしくお金を学ぶアプリ",
-    images: ["/famimane_ogp.png"],
+    images: [
+      {
+        url: "/famimane_ogp.png",
+        width: 1733,
+        height: 907,
+        alt: "ファミマネのOGP画像",
+      },
+    ],
   },
 };
 

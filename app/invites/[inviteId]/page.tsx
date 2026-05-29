@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import EmptyState from "@/app/components/ui/empty-state";
 import PageContainer from "@/app/components/ui/page-container";
@@ -11,6 +12,7 @@ import SecondaryButton from "@/app/components/ui/secondary-button";
 import SectionCard from "@/app/components/ui/section-card";
 import StatusBadge from "@/app/components/ui/status-badge";
 import { formatFamilyRole, formatInviteStatus, inviteStatusTone } from "@/app/components/ui/family-labels";
+import { LegalLoginNotice } from "@/app/components/ui/legal-links";
 
 type InviteDetails = {
   invite_id: string;
@@ -55,7 +57,7 @@ export default function InviteAcceptPage() {
     const loadSession = async () => {
       const [{ data: sessionData, error }, { data: inviteData, error: inviteError }] =
         await Promise.all([
-          supabase.auth.getSession(),
+          getSafeSession(supabase),
           supabase.rpc("get_family_invite_details", {
             target_invite_id: inviteId,
           }),
@@ -278,12 +280,18 @@ export default function InviteAcceptPage() {
               </PrimaryButton>
 
               {!state.email ? (
-                <Link
-                  href={loginHrefWithInviteEmail}
-                  className="inline-flex"
-                >
-                  <SecondaryButton>ログインページへ</SecondaryButton>
-                </Link>
+                <>
+                  <Link
+                    href={loginHrefWithInviteEmail}
+                    className="inline-flex"
+                  >
+                    <SecondaryButton>ログインページへ</SecondaryButton>
+                  </Link>
+                  <LegalLoginNotice
+                    className="text-sm leading-7 text-[var(--text-secondary)]"
+                    linkClassName="underline underline-offset-4"
+                  />
+                </>
               ) : null}
             </div>
 

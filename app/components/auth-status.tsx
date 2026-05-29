@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import SectionCard from "@/app/components/ui/section-card";
@@ -63,7 +64,7 @@ export default function AuthStatus() {
       const {
         data: { session },
         error,
-      } = await supabase.auth.getSession();
+      } = await getSafeSession(supabase);
 
       if (!isActive) {
         return;

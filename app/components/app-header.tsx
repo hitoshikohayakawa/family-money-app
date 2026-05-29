@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import useElementaryMode from "@/app/components/use-elementary-mode";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import PrimaryButton from "@/app/components/ui/primary-button";
 import SecondaryButton from "@/app/components/ui/secondary-button";
@@ -34,7 +35,7 @@ export default function AppHeader() {
     const loadSession = async () => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await getSafeSession(supabase);
       const [{ data: membership }, { data: profile }] = session?.user
         ? await Promise.all([
             supabase

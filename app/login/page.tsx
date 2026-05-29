@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { LegalLinks, LegalLoginNotice } from "@/app/components/ui/legal-links";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 
 function mapAuthErrorMessage(message: string) {
@@ -189,7 +191,7 @@ function LoginPageContent() {
         : nextPath;
 
     const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await getSafeSession(supabase);
 
       if (!isActive) {
         return;
@@ -402,6 +404,11 @@ function LoginPageContent() {
                   </button>
                 </form>
 
+                <LegalLoginNotice
+                  className="mt-4 text-sm leading-7 text-[#516251]"
+                  linkClassName="font-semibold underline underline-offset-4 transition hover:text-[#378C41]"
+                />
+
                 <div className="mt-5 flex flex-col gap-3 text-sm">
                   <Link
                     href={forgotPasswordHref}
@@ -484,6 +491,25 @@ function LoginPageContent() {
               title="親子で会話しながら学ぶきっかけに"
               description="お金の選択を通じて、将来のことや目標について親子で自然に話せます。"
             />
+          </div>
+          <div className="mt-5 rounded-[30px] border border-[rgba(75,175,87,0.14)] bg-[linear-gradient(140deg,rgba(244,250,245,0.98),rgba(255,255,255,0.98))] p-6 shadow-[0_18px_40px_rgba(75,175,87,0.08)]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-[rgba(76,163,104,0.14)] text-[#378C41]">
+                <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-current" strokeWidth="1.8">
+                  <path d="M4 12.5 8.5 17 20 6.5" />
+                  <path d="M12 3 5 6v5.2c0 4.5 3 7.2 7 8.8 4-1.6 7-4.3 7-8.8V6Z" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-xl font-extrabold leading-8 text-[#1F2D20]">
+                  サービスに入金しないから、安心して使える
+                </h3>
+                <p className="mt-3 text-sm leading-8 text-[#516251] sm:text-base">
+                  ファミマネは、サービス内にお金を預ける仕組みではありません。子どもから申請が届いたあと、
+                  親が直接お金を渡して完了するので、家庭のペースで安心して使えます。
+                </p>
+              </div>
+            </div>
           </div>
         </MarketingSection>
 
@@ -609,6 +635,9 @@ function LoginPageContent() {
             <Link href={registerHref} className="transition hover:text-white">
               無料ではじめる
             </Link>
+            <p className="leading-7 text-white/75">
+              <LegalLinks linkClassName="underline underline-offset-4 transition hover:text-white" />
+            </p>
             <p className="text-white/60">© {new Date().getFullYear()} ファミマネ</p>
           </div>
         </div>

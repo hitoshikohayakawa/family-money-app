@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import EmptyState from "@/app/components/ui/empty-state";
@@ -37,7 +38,7 @@ export default function FamilySetup() {
     const loadSession = async () => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await getSafeSession(supabase);
 
       if (!isActive) {
         return;

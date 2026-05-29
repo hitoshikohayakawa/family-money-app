@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { LegalLinks } from "@/app/components/ui/legal-links";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 
 function normalizeNextPath(nextPath: string | null) {
@@ -34,6 +36,7 @@ function RegisterPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [agreedToPolicies, setAgreedToPolicies] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,7 +44,7 @@ function RegisterPageContent() {
     let isActive = true;
 
     const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await getSafeSession(supabase);
 
       if (!isActive) {
         return;
@@ -79,6 +82,11 @@ function RegisterPageContent() {
 
     if (password !== passwordConfirmation) {
       setErrorMessage("確認用パスワードが一致していません。");
+      return;
+    }
+
+    if (!agreedToPolicies) {
+      setErrorMessage("利用規約とプライバシーポリシーへの同意が必要です。");
       return;
     }
 
@@ -187,9 +195,22 @@ function RegisterPageContent() {
             />
           </label>
 
+          <label className="flex items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-sm leading-6 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              checked={agreedToPolicies}
+              onChange={(event) => setAgreedToPolicies(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-zinc-300 text-black focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950"
+            />
+            <span>
+              <LegalLinks linkClassName="underline underline-offset-4" />
+              {" に同意する"}
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !agreedToPolicies}
             className="rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-300"
           >
             {isSubmitting ? "登録中..." : "新規登録する"}

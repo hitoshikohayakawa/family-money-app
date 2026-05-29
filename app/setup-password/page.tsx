@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { LegalLoginNotice } from "@/app/components/ui/legal-links";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 
 function normalizeNextPath(nextPath: string | null) {
@@ -34,7 +37,7 @@ function SetupPasswordPageContent() {
       const {
         data: { session },
         error,
-      } = await supabase.auth.getSession();
+      } = await getSafeSession(supabase);
 
       if (!isActive) {
         return;
@@ -153,8 +156,19 @@ function SetupPasswordPageContent() {
             >
               {isSubmitting ? "設定中..." : "新しいパスワードを設定する"}
             </button>
+
+            <LegalLoginNotice
+              className="text-sm leading-7 text-zinc-600 dark:text-zinc-400"
+              linkClassName="underline underline-offset-4"
+            />
           </form>
         )}
+
+        <div className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">
+          <Link href="/login" className="underline underline-offset-4">
+            ログインページへ戻る
+          </Link>
+        </div>
 
         {errorMessage ? (
           <p className="mt-4 text-sm text-red-600 dark:text-red-400">

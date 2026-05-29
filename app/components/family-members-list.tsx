@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import EmptyState from "@/app/components/ui/empty-state";
@@ -47,7 +48,7 @@ export default function FamilyMembersList() {
       const {
         data: { session },
         error: sessionError,
-      } = await supabase.auth.getSession();
+      } = await getSafeSession(supabase);
 
       if (!isActive) {
         return;
@@ -175,7 +176,7 @@ export default function FamilyMembersList() {
     const {
       data: { session },
       error: sessionError,
-    } = await supabase.auth.getSession();
+    } = await getSafeSession(supabase);
 
     if (sessionError || !session?.access_token) {
       setState((currentState) => ({

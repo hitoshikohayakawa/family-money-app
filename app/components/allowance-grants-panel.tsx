@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import useElementaryMode from "@/app/components/use-elementary-mode";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import EmptyState from "@/app/components/ui/empty-state";
@@ -185,7 +187,7 @@ async function getAccessToken() {
   const {
     data: { session },
     error,
-  } = await supabase.auth.getSession();
+  } = await getSafeSession(supabase);
 
   if (error || !session?.access_token) {
     throw new Error("ログイン状態を確認できませんでした。");
@@ -452,6 +454,75 @@ function DashboardIcon({
     >
       {children}
     </span>
+  );
+}
+
+function getInvestmentCategoryCodeForGrant(
+  grant: AllowanceGrant,
+  investmentAssets: InvestmentAssetOption[]
+): InvestmentCategoryCode | null {
+  const matchedAsset =
+    investmentAssets.find((asset) => asset.asset_id === grant.decision_asset_id) ??
+    investmentAssets.find((asset) => asset.asset_code === grant.decision_asset_code);
+
+  return matchedAsset?.asset_category_code ?? null;
+}
+
+function InvestmentCategoryIcon({
+  categoryCode,
+}: {
+  categoryCode: InvestmentCategoryCode | null;
+}) {
+  const toneClasses =
+    categoryCode === "index_stock"
+      ? "bg-[rgba(106,164,219,0.16)] text-[#2F79BA]"
+      : categoryCode === "single_stock"
+        ? "bg-[rgba(228,163,94,0.18)] text-[#B46B1E]"
+        : categoryCode === "resource"
+          ? "bg-[rgba(241,201,116,0.2)] text-[#A67519]"
+          : categoryCode === "crypto"
+            ? "bg-[rgba(146,123,210,0.18)] text-[#7A57C1]"
+            : "bg-[rgba(76,163,104,0.14)] text-[var(--brand-primary-strong)]";
+
+  return (
+    <div
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] ${toneClasses}`}
+    >
+      {categoryCode === "index_stock" ? (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+          <path d="M4 18h16" />
+          <path d="M7 15V9" />
+          <path d="M12 15V6" />
+          <path d="M17 15v-3" />
+          <path d="m5 11 4-3 3 1 5-4 2 1" />
+        </svg>
+      ) : categoryCode === "single_stock" ? (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+          <path d="M4 20h16" />
+          <path d="M6 20V9l6-4 6 4v11" />
+          <path d="M10 12h4" />
+          <path d="M10 16h4" />
+        </svg>
+      ) : categoryCode === "resource" ? (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+          <ellipse cx="12" cy="8" rx="5" ry="2.5" />
+          <path d="M7 8v5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V8" />
+          <path d="M7 13v3c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-3" />
+        </svg>
+      ) : categoryCode === "crypto" ? (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+          <path d="M12 3v18" />
+          <path d="M8.5 7.5h5a2.5 2.5 0 1 1 0 5h-5Z" />
+          <path d="M8.5 12.5H14a2.75 2.75 0 1 1 0 5.5H8.5Z" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+          <path d="M12 21V10" />
+          <path d="M7 14c0-3 2.2-5 5-5s5 2 5 5" />
+          <path d="M6 5h12" />
+        </svg>
+      )}
+    </div>
   );
 }
 
@@ -763,7 +834,7 @@ export default function AllowanceGrantsPanel({
       const {
         data: { session },
         error: sessionError,
-      } = await supabase.auth.getSession();
+      } = await getSafeSession(supabase);
 
       if (!isActive) {
         return;
@@ -2298,6 +2369,10 @@ export default function AllowanceGrantsPanel({
                         {(() => {
                           const isExpanded = expandedInvestmentGrantIds.includes(grant.id);
                           const currentValue = grant.current_value_jpy ?? grant.amount_jpy;
+                          const categoryCode = getInvestmentCategoryCodeForGrant(
+                            grant,
+                            state.investmentAssets
+                          );
                           const gainTone =
                             grant.unrealized_gain_jpy !== null && grant.unrealized_gain_jpy < 0
                               ? "text-[var(--danger)]"
@@ -2328,13 +2403,7 @@ export default function AllowanceGrantsPanel({
                                   <div className="min-w-0 flex-1">
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[rgba(76,163,104,0.14)] text-[var(--brand-primary-strong)]">
-                                          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
-                                            <path d="M12 21V10" />
-                                            <path d="M7 14c0-3 2.2-5 5-5s5 2 5 5" />
-                                            <path d="M6 5h12" />
-                                          </svg>
-                                        </div>
+                                        <InvestmentCategoryIcon categoryCode={categoryCode} />
                                         <p className="truncate text-[1.05rem] font-extrabold text-[var(--text-primary)]">
                                           {grant.decision_asset_name ?? "投資先"}
                                         </p>
@@ -2766,15 +2835,28 @@ export default function AllowanceGrantsPanel({
         >
           <div className="space-y-4">
             <div className="rounded-[22px] bg-[linear-gradient(135deg,rgba(255,239,245,0.96),rgba(255,255,255,0.94))] px-4 py-4">
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">
-                {confirmingPaidGroup.childLabel} への支払い
-              </p>
-              <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">
-                {formatCurrency(confirmingPaidGroup.amountJpy)}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                実際に子どもへお金を渡したあとに押してください。押すと支払い実績へ移動します。
-              </p>
+              <div className="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
+                <div className="overflow-hidden rounded-[18px] bg-white/70">
+                  <Image
+                    src="/assets/lp/payment-handover.png"
+                    alt="親が子どもにお金を手渡ししているイメージ"
+                    width={640}
+                    height={320}
+                    className="h-auto w-full object-cover"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-secondary)]">
+                    {confirmingPaidGroup.childLabel} への支払い
+                  </p>
+                  <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">
+                    {formatCurrency(confirmingPaidGroup.amountJpy)}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    実際に子どもへお金を渡したあとに押してください。押すと支払い実績へ移動します。
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <PrimaryButton
