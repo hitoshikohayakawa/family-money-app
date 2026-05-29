@@ -27,6 +27,8 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ファミマネ",
     description: "家族でたのしくお金を学ぶアプリ",
+    url: "https://family-money-app-one.vercel.app",
+  type: "website",
     images: [
       {
         url: "/famimane_ogp.png?v=2",
