@@ -23,6 +23,10 @@ function normalizeEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
+function normalizeDisplayName(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function generateInitialPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
   const bytes = crypto.getRandomValues(new Uint8Array(12));
@@ -104,6 +108,10 @@ export async function POST(request: Request) {
     typeof body === "object" && body !== null && "role" in body
       ? body.role
       : undefined;
+  const displayName =
+    typeof body === "object" && body !== null && "displayName" in body
+      ? normalizeDisplayName(body.displayName)
+      : "";
 
   if (!familyId) {
     return jsonError("家族IDが指定されていません。");
@@ -241,6 +249,7 @@ export async function POST(request: Request) {
   const { error: profileError } = await adminClient.from("profiles").upsert({
     id: invitedUser.id,
     email,
+    display_name: displayName || null,
   });
 
   if (profileError) {

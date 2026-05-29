@@ -70,6 +70,7 @@ type FamilyInvitesState = {
 
 export default function FamilyInvitesPanel() {
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteDisplayName, setInviteDisplayName] = useState("");
   const [inviteRole, setInviteRole] = useState<"guardian" | "child">("guardian");
   const [inviteFilter, setInviteFilter] = useState<InviteFilter>("all");
   const [state, setState] = useState<FamilyInvitesState>({
@@ -278,6 +279,7 @@ export default function FamilyInvitesPanel() {
         body: JSON.stringify({
           familyId: state.membership.family_id,
           email: normalizedEmail,
+          displayName: inviteDisplayName.trim(),
           role: inviteRole,
         }),
       });
@@ -312,6 +314,7 @@ export default function FamilyInvitesPanel() {
     const { data: invites, error: invitesError } = await fetchFamilyInvites();
 
     setInviteEmail("");
+    setInviteDisplayName("");
 
     if (invitesError) {
       setState((currentState) => ({
@@ -520,6 +523,19 @@ export default function FamilyInvitesPanel() {
                   onChange={(event) => setInviteEmail(event.target.value)}
                   placeholder="例: family@example.com"
                   required
+                />
+
+                <TextInput
+                  label={inviteRole === "child" ? "子どもの呼び名" : "表示名"}
+                  hint={
+                    inviteRole === "child"
+                      ? "例: なぎ、そうた。画面ではこの名前を優先して表示します。"
+                      : "例: パパ、ママ、おばあちゃん。"
+                  }
+                  type="text"
+                  value={inviteDisplayName}
+                  onChange={(event) => setInviteDisplayName(event.target.value)}
+                  placeholder={inviteRole === "child" ? "例: なぎ" : "例: パパ"}
                 />
 
                 <SelectInput

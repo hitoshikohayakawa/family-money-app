@@ -2,6 +2,13 @@ import type { Metadata } from "next";
 import { Geist_Mono, M_PLUS_Rounded_1c } from "next/font/google";
 import "./globals.css";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
 const roundedSans = M_PLUS_Rounded_1c({
   variable: "--font-rounded-sans",
   subsets: ["latin"],
@@ -14,8 +21,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "ファミマネ",
   description: "家族でたのしくお金を学ぶアプリ",
+  openGraph: {
+    title: "ファミマネ",
+    description: "家族でたのしくお金を学ぶアプリ",
+    images: [
+      {
+        url: "/famimane_ogp.png",
+        alt: "ファミマネのOGP画像",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ファミマネ",
+    description: "家族でたのしくお金を学ぶアプリ",
+    images: ["/famimane_ogp.png"],
+  },
 };
 
 export default function RootLayout({

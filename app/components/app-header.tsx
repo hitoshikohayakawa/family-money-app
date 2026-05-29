@@ -11,6 +11,7 @@ import StatusBadge from "@/app/components/ui/status-badge";
 
 type HeaderState = {
   email: string | null;
+  displayName: string | null;
   role: string | null;
   loading: boolean;
   signingOut: boolean;
@@ -21,6 +22,7 @@ export default function AppHeader() {
   const { elementaryMode, setElementaryMode } = useElementaryMode();
   const [state, setState] = useState<HeaderState>({
     email: null,
+    displayName: null,
     role: null,
     loading: true,
     signingOut: false,
@@ -33,14 +35,21 @@ export default function AppHeader() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      const { data: membership } = session?.user
-        ? await supabase
-            .from("family_memberships")
-            .select("role")
-            .eq("status", "active")
-            .eq("user_id", session.user.id)
-            .maybeSingle()
-        : { data: null };
+      const [{ data: membership }, { data: profile }] = session?.user
+        ? await Promise.all([
+            supabase
+              .from("family_memberships")
+              .select("role")
+              .eq("status", "active")
+              .eq("user_id", session.user.id)
+              .maybeSingle(),
+            supabase
+              .from("profiles")
+              .select("display_name")
+              .eq("id", session.user.id)
+              .maybeSingle(),
+          ])
+        : [{ data: null }, { data: null }];
 
       if (!isActive) {
         return;
@@ -49,6 +58,10 @@ export default function AppHeader() {
       setState((currentState) => ({
         ...currentState,
         email: session?.user?.email ?? null,
+        displayName:
+          typeof profile?.display_name === "string" && profile.display_name.trim().length > 0
+            ? profile.display_name
+            : null,
         role: typeof membership?.role === "string" ? membership.role : null,
         loading: false,
       }));
@@ -66,6 +79,7 @@ export default function AppHeader() {
       setState((currentState) => ({
         ...currentState,
         email: session?.user?.email ?? null,
+        displayName: null,
         role: null,
         loading: false,
         signingOut: false,
@@ -133,9 +147,12 @@ export default function AppHeader() {
             <div className="absolute right-0 mt-3 w-[min(86vw,360px)] rounded-[30px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] p-4 shadow-[0_24px_70px_rgba(42,88,53,0.18)]">
               <div className="rounded-[22px] bg-[var(--surface-accent)] px-4 py-3">
                 <p className="text-xs font-semibold text-[var(--text-muted)]">ログイン状態</p>
-                <p className="mt-1 break-all text-sm font-bold text-[var(--text-primary)]">
-                  {state.loading ? "確認中..." : state.email ?? "未ログイン"}
+                <p className="mt-1 text-sm font-bold text-[var(--text-primary)]">
+                  {state.loading ? "確認中..." : state.displayName ?? state.email ?? "未ログイン"}
                 </p>
+                {state.displayName && state.email ? (
+                  <p className="mt-1 break-all text-xs text-[var(--text-muted)]">{state.email}</p>
+                ) : null}
                 <div className="mt-2">
                   <StatusBadge tone={state.email ? "success" : "neutral"}>
                     {state.email ? "利用中" : "未ログイン"}
@@ -168,6 +185,13 @@ export default function AppHeader() {
                       onClick={() => setMenuOpen(false)}
                     >
                       家族設定
+                    </Link>
+                    <Link
+                      href="/family#name-settings"
+                      className="rounded-[18px] px-4 py-3 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-accent)]"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      名前を編集
                     </Link>
                     <Link
                       href="/family/invites"
