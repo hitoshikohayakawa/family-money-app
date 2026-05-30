@@ -2,6 +2,7 @@ type SendEmailParams = {
   to: string[];
   subject: string;
   text: string;
+  html?: string;
 };
 
 type SendEmailResult = {
@@ -17,6 +18,7 @@ export async function sendNotificationEmail({
   to,
   subject,
   text,
+  html,
 }: SendEmailParams): Promise<SendEmailResult> {
   const recipients = to
     .map((email) => email.trim().toLowerCase())
@@ -44,6 +46,7 @@ export async function sendNotificationEmail({
       to: recipients,
       subject,
       text,
+      ...(html ? { html } : {}),
     }),
   });
 
