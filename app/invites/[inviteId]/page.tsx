@@ -21,6 +21,7 @@ type InviteDetails = {
   expires_at: string;
   membership_exists: boolean;
   is_expired: boolean;
+  display_name: string | null;
 };
 
 type InvitePageState = {
@@ -35,7 +36,6 @@ type InvitePageState = {
 export default function InviteAcceptPage() {
   const params = useParams<{ inviteId: string }>();
   const inviteId = params.inviteId;
-  const [inputEmail, setInputEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [settingUp, setSettingUp] = useState(false);
@@ -109,14 +109,7 @@ export default function InviteAcceptPage() {
   }, [inviteId]);
 
   const handleSetupAndAccept = async () => {
-    if (!state.inviteDetails) return;
-
-    const normalizedEmail = inputEmail.trim().toLowerCase();
-
-    if (!normalizedEmail) {
-      setState((s) => ({ ...s, error: "登録メールアドレスを入力してください。" }));
-      return;
-    }
+    if (!state.inviteDetails?.email) return;
 
     if (password.length < 6) {
       setState((s) => ({ ...s, error: "パスワードは6文字以上で入力してください。" }));
@@ -136,7 +129,7 @@ export default function InviteAcceptPage() {
       setPasswordResponse = await fetch(`/api/family-invites/${inviteId}/set-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, password }),
+        body: JSON.stringify({ email: state.inviteDetails.email, password }),
       });
     } catch {
       setState((s) => ({ ...s, error: "サーバーへの接続に失敗しました。" }));
@@ -286,6 +279,14 @@ export default function InviteAcceptPage() {
           <>
             {state.inviteDetails ? (
               <div className="grid gap-3 sm:grid-cols-2">
+                {state.inviteDetails.display_name ? (
+                  <div className="sm:col-span-2 rounded-[var(--radius-lg)] bg-[var(--surface-accent)] px-4 py-4">
+                    <p className="text-sm font-semibold text-[var(--text-secondary)]">参加する人</p>
+                    <p className="mt-2 text-base font-semibold text-[var(--text-primary)]">
+                      {state.inviteDetails.display_name}
+                    </p>
+                  </div>
+                ) : null}
                 <div className="rounded-[var(--radius-lg)] bg-[var(--surface-card-strong)] px-4 py-4">
                   <p className="text-sm font-semibold text-[var(--text-secondary)]">参加するメールアドレス</p>
                   <p className="mt-2 break-all text-base font-semibold text-[var(--text-primary)]">
@@ -368,19 +369,6 @@ export default function InviteAcceptPage() {
                 </div>
               ) : (
                 <>
-                  <p className="text-sm text-[var(--text-secondary)]">
-                    招待文に記載されている登録メールアドレスを入力してください。
-                  </p>
-                  <label className="flex flex-col gap-1.5 text-sm font-medium text-[var(--text-primary)]">
-                    登録メールアドレス
-                    <input
-                      type="email"
-                      value={inputEmail}
-                      onChange={(e) => setInputEmail(e.target.value)}
-                      placeholder="invited@example.com"
-                      className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500"
-                    />
-                  </label>
                   <label className="flex flex-col gap-1.5 text-sm font-medium text-[var(--text-primary)]">
                     パスワード
                     <input
