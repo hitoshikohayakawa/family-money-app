@@ -808,6 +808,10 @@ export default function AllowanceGrantsPanel({
   const [expandedInvestmentGrantIds, setExpandedInvestmentGrantIds] = useState<string[]>([]);
   const [expandedGuardianGrantIds, setExpandedGuardianGrantIds] = useState<string[]>([]);
   const [pendingChoice, setPendingChoice] = useState<PendingChoice>(null);
+  const [grantSentModal, setGrantSentModal] = useState<{
+    amountJpy: number;
+    childLabel: string;
+  } | null>(null);
   const [activePage, setActivePage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const [state, setState] = useState<AllowanceState>({
@@ -1126,7 +1130,7 @@ export default function AllowanceGrantsPanel({
     }
 
     if (!response.ok) {
-      const message = await parseApiError(response, "お小遣いの作成に失敗しました。");
+      const message = await parseApiError(response, "お小遣いの送信に失敗しました。");
       setState((currentState) => ({
         ...currentState,
         submitting: false,
@@ -1135,6 +1139,10 @@ export default function AllowanceGrantsPanel({
       }));
       return;
     }
+
+    const sentGrant = await response.json().catch(() => null) as {
+      grant?: { amount_jpy: number; child_display_label: string };
+    } | null;
 
     const { data: grants, error: grantsError } = await fetchAllowanceGrants();
 
@@ -1146,9 +1154,15 @@ export default function AllowanceGrantsPanel({
       setState((currentState) => ({
         ...currentState,
         submitting: false,
-        error: `お小遣いは作成されましたが一覧の再取得に失敗しました: ${grantsError.message}`,
-        successMessage: "お小遣いを作成しました。",
+        error: `お小遣いは送りましたが一覧の再取得に失敗しました: ${grantsError.message}`,
+        successMessage: "",
       }));
+      if (sentGrant?.grant) {
+        setGrantSentModal({
+          amountJpy: sentGrant.grant.amount_jpy,
+          childLabel: sentGrant.grant.child_display_label,
+        });
+      }
       return;
     }
 
@@ -1158,12 +1172,18 @@ export default function AllowanceGrantsPanel({
       requestingCashGrantId: null,
       requestingInvestmentGrantId: null,
       error: "",
-      successMessage: "お小遣いを作成しました。子どもへ通知しました。",
+      successMessage: "",
       grants,
     }));
     setPendingChoice((currentValue) =>
       currentValue?.type === "grant_create" ? null : currentValue
     );
+    if (sentGrant?.grant) {
+      setGrantSentModal({
+        amountJpy: sentGrant.grant.amount_jpy,
+        childLabel: sentGrant.grant.child_display_label,
+      });
+    }
   };
 
   const executeRequestImmediateCash = async (grantId: string) => {
@@ -2736,7 +2756,7 @@ export default function AllowanceGrantsPanel({
                   type="submit"
                   disabled={state.submitting || amountJpy.trim().length === 0}
                 >
-                  {state.submitting ? "お小遣いを作成しています..." : "お小遣いを作成する"}
+                  {state.submitting ? "送っています..." : "お小遣いを送る"}
                 </PrimaryButton>
                 <SecondaryButton type="button" onClick={() => setPendingChoice(null)}>
                   キャンセル
@@ -3212,6 +3232,38 @@ export default function AllowanceGrantsPanel({
             </div>
           </div>
         </ChoiceModal>
+      ) : null}
+
+      {grantSentModal ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-4 sm:items-center sm:pb-0">
+          <div className="w-full max-w-sm rounded-[32px] bg-white p-6 shadow-[0_24px_64px_rgba(0,0,0,0.18)] sm:p-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-[var(--surface-accent)]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8 fill-none stroke-[var(--brand-primary-strong)]" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 12l3 3 5-5" />
+              </svg>
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-[var(--text-primary)]">
+              お小遣いを送りました
+            </h2>
+            <div className="mt-3 rounded-[20px] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-sm text-[var(--text-secondary)]">
+                {grantSentModal.childLabel} さんに
+              </p>
+              <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
+                {formatCurrency(grantSentModal.amountJpy)}
+              </p>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              子どもが「すぐにもらう」か「投資する」かを選ぶと通知が届きます。
+            </p>
+            <div className="mt-5">
+              <PrimaryButton onClick={() => setGrantSentModal(null)}>
+                とじる
+              </PrimaryButton>
+            </div>
+          </div>
+        </div>
       ) : null}
     </>
   );
