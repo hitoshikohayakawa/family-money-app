@@ -13,6 +13,9 @@ type ImmediateCashGrant = {
   family_id: string;
   child_display_label: string;
   amount_jpy: number;
+  granted_by_user_id: string | null;
+  granted_by_email: string | null;
+  granted_by_display_label: string;
 };
 
 function jsonError(message: string, status = 400) {
@@ -30,36 +33,16 @@ function formatCurrency(amount: number) {
 const siteUrl =
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://famimane.app";
+  "https://famimane.me";
 
-async function fetchGuardianEmails(familyId: string) {
+async function fetchEmailByUserId(userId: string): Promise<string | null> {
   const adminClient = createServiceRoleServerClient();
-  const { data: members, error: membersError } = await adminClient
-    .from("family_members")
-    .select("user_id")
-    .eq("family_id", familyId)
-    .in("role", ["guardian_admin", "guardian"]);
-
-  if (membersError) {
-    throw membersError;
-  }
-
-  const userIds = (members ?? []).map((member) => member.user_id).filter(Boolean);
-
-  if (userIds.length === 0) {
-    return [];
-  }
-
-  const { data: profiles, error: profilesError } = await adminClient
+  const { data } = await adminClient
     .from("profiles")
     .select("email")
-    .in("id", userIds);
-
-  if (profilesError) {
-    throw profilesError;
-  }
-
-  return (profiles ?? []).map((profile) => profile.email).filter((email): email is string => Boolean(email));
+    .eq("id", userId)
+    .single();
+  return data?.email ?? null;
 }
 
 export async function POST(request: Request) {
@@ -100,39 +83,43 @@ export async function POST(request: Request) {
   const grant = Array.isArray(data) ? (data[0] as ImmediateCashGrant | undefined) : undefined;
 
   if (grant) {
-    const guardianEmails = await fetchGuardianEmails(grant.family_id);
+    const guardianEmail =
+      grant.granted_by_email ??
+      (grant.granted_by_user_id ? await fetchEmailByUserId(grant.granted_by_user_id) : null);
 
-    const amountFormatted = formatCurrency(grant.amount_jpy);
-    await sendNotificationEmail({
-      to: guardianEmails,
-      subject: "【ファミマネ】支払い申請が届きました",
-      text: [
-        `${grant.child_display_label}さんから払い出し申請が来ました！`,
-        "",
-        `子ども：${grant.child_display_label}`,
-        `金額：${amountFormatted}`,
-        "内容：すぐもらう",
-        "",
-        `${grant.child_display_label}さんにお金を渡したら、`,
-        "ファミマネで「渡した」ボタンを押してください。",
-        "",
-        "また、お金を渡すだけでなく、",
-        "どうして今払い出しを行ったのかを話し合ってみてください。",
-        "",
-        siteUrl,
-        "",
-        "家族と学ぶお金学習アプリ",
-        "〜〜 ファミマネ 〜〜",
-      ].join("\n"),
-      html: buildGuardianPaymentRequestHtml({
-        childName: grant.child_display_label,
-        amount: amountFormatted,
-        requestType: "すぐもらう",
-        appUrl: siteUrl,
-      }),
-    }).catch(() => {
-      // 操作成功を優先し、メール失敗ではUI操作を失敗扱いにしません。
-    });
+    if (guardianEmail) {
+      const amountFormatted = formatCurrency(grant.amount_jpy);
+      await sendNotificationEmail({
+        to: [guardianEmail],
+        subject: "【ファミマネ】支払い申請が届きました",
+        text: [
+          `${grant.child_display_label}さんから払い出し申請が来ました！`,
+          "",
+          `子ども：${grant.child_display_label}`,
+          `金額：${amountFormatted}`,
+          "内容：すぐもらう",
+          "",
+          `${grant.child_display_label}さんにお金を渡したら、`,
+          "ファミマネで「渡した」ボタンを押してください。",
+          "",
+          "また、お金を渡すだけでなく、",
+          "どうして今払い出しを行ったのかを話し合ってみてください。",
+          "",
+          siteUrl,
+          "",
+          "家族と学ぶお金学習アプリ",
+          "〜〜 ファミマネ 〜〜",
+        ].join("\n"),
+        html: buildGuardianPaymentRequestHtml({
+          childName: grant.child_display_label,
+          amount: amountFormatted,
+          requestType: "すぐもらう",
+          appUrl: siteUrl,
+        }),
+      }).catch(() => {
+        // 操作成功を優先し、メール失敗ではUI操作を失敗扱いにしません。
+      });
+    }
   }
 
   return NextResponse.json({ grant });
