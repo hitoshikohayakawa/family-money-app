@@ -41,7 +41,6 @@ type CreatedInviteResponse = {
     role: "guardian" | "child";
     expires_at: string;
   };
-  initialPassword?: string;
   error?: string;
 };
 
@@ -84,7 +83,10 @@ export default function FamilyInvitesPanel() {
     membership: null,
     invites: [],
   });
-  const [createdInviteModal, setCreatedInviteModal] = useState<string | null>(null);
+  const [createdInviteModal, setCreatedInviteModal] = useState<{
+    inviteId: string;
+    email: string;
+  } | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -318,7 +320,7 @@ export default function FamilyInvitesPanel() {
         error: `招待は作成されましたが一覧の再取得に失敗しました: ${invitesError.message}`,
         successMessage: "",
       }));
-      setCreatedInviteModal(createdInvite.id);
+      setCreatedInviteModal({ inviteId: createdInvite.id, email: createdInvite.email });
       return;
     }
 
@@ -330,7 +332,7 @@ export default function FamilyInvitesPanel() {
       successMessage: "",
       invites: Array.isArray(invites) ? (invites as FamilyInvite[]) : [],
     }));
-    setCreatedInviteModal(createdInvite.id);
+    setCreatedInviteModal({ inviteId: createdInvite.id, email: createdInvite.email });
   };
 
   const handleRevokeInvite = async (inviteId: string) => {
@@ -413,12 +415,17 @@ export default function FamilyInvitesPanel() {
 
   const handleCopyShareText = async (inviteId: string) => {
     const inviteUrl = `${window.location.origin}/invites/${inviteId}`;
+    const invite = state.invites.find((c) => c.id === inviteId);
     const shareText = [
       "家族マネーアプリ「ファミマネ」への招待です。",
-      "以下のリンクから参加してください。",
-      `招待リンク: ${inviteUrl}`,
       "",
-      "リンクを開いて、パスワードを設定すると参加できます。",
+      "登録メールアドレス：",
+      invite?.email ?? "",
+      "",
+      "以下のリンクから参加してください。",
+      inviteUrl,
+      "",
+      "リンクを開いてパスワードを設定すると参加できます。",
     ].join("\n");
 
     try {
@@ -478,11 +485,11 @@ export default function FamilyInvitesPanel() {
               招待リンクを作成しました。招待したい家族にリンク、または招待文を送ってください。
             </p>
             <div className="mt-5 flex flex-col gap-3">
-              <PrimaryButton onClick={() => handleCopyInviteLink(createdInviteModal)}>
-                {state.copiedInviteId === createdInviteModal ? "コピーしました" : "招待リンクをコピー"}
+              <PrimaryButton onClick={() => handleCopyInviteLink(createdInviteModal.inviteId)}>
+                {state.copiedInviteId === createdInviteModal.inviteId ? "コピーしました" : "招待リンクをコピー"}
               </PrimaryButton>
-              <SecondaryButton onClick={() => handleCopyShareText(createdInviteModal)}>
-                {state.copiedShareTextInviteId === createdInviteModal ? "コピーしました" : "招待文をコピー"}
+              <SecondaryButton onClick={() => handleCopyShareText(createdInviteModal.inviteId)}>
+                {state.copiedShareTextInviteId === createdInviteModal.inviteId ? "コピーしました" : "招待文をコピー"}
               </SecondaryButton>
               <SecondaryButton onClick={() => setCreatedInviteModal(null)}>
                 閉じる

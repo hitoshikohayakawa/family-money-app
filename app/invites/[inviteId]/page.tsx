@@ -35,8 +35,11 @@ type InvitePageState = {
 export default function InviteAcceptPage() {
   const params = useParams<{ inviteId: string }>();
   const inviteId = params.inviteId;
-  const [passwordResetSent, setPasswordResetSent] = useState(false);
-  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
+  const [inputEmail, setInputEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [settingUp, setSettingUp] = useState(false);
+  const [joined, setJoined] = useState(false);
   const [state, setState] = useState<InvitePageState>({
     loading: true,
     accepting: false,
@@ -105,16 +108,97 @@ export default function InviteAcceptPage() {
     };
   }, [inviteId]);
 
-  const handleSetupPassword = async () => {
-    if (!state.inviteDetails?.email) return;
-    setSendingPasswordReset(true);
-    const redirectTo =
-      `${window.location.origin}/setup-password` +
-      `?next=${encodeURIComponent(`/invites/${inviteId}`)}` +
-      `&mode=reset`;
-    await supabase.auth.resetPasswordForEmail(state.inviteDetails.email, { redirectTo });
-    setSendingPasswordReset(false);
-    setPasswordResetSent(true);
+  const handleSetupAndAccept = async () => {
+    if (!state.inviteDetails) return;
+
+    const normalizedEmail = inputEmail.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setState((s) => ({ ...s, error: "登録メールアドレスを入力してください。" }));
+      return;
+    }
+
+    if (password.length < 6) {
+      setState((s) => ({ ...s, error: "パスワードは6文字以上で入力してください。" }));
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      setState((s) => ({ ...s, error: "確認用パスワードが一致していません。" }));
+      return;
+    }
+
+    setSettingUp(true);
+    setState((s) => ({ ...s, error: "" }));
+
+    let setPasswordResponse: Response;
+    try {
+      setPasswordResponse = await fetch(`/api/family-invites/${inviteId}/set-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail, password }),
+      });
+    } catch {
+      setState((s) => ({ ...s, error: "サーバーへの接続に失敗しました。" }));
+      setSettingUp(false);
+      return;
+    }
+
+    const json = (await setPasswordResponse.json().catch(() => null)) as {
+      email?: string;
+      error?: string;
+    } | null;
+
+    if (!setPasswordResponse.ok || !json?.email) {
+      setState((s) => ({
+        ...s,
+        error: json?.error ?? "パスワードの設定に失敗しました。",
+      }));
+      setSettingUp(false);
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: json.email,
+      password,
+    });
+
+    if (signInError) {
+      setState((s) => ({ ...s, error: `ログインに失敗しました: ${signInError.message}` }));
+      setSettingUp(false);
+      return;
+    }
+
+    const { data: acceptData, error: acceptError } = await supabase.rpc(
+      "accept_family_invite",
+      { invite_id: inviteId }
+    );
+
+    if (acceptError) {
+      setState((s) => ({
+        ...s,
+        error: `招待の受諾に失敗しました: ${acceptError.message}`,
+      }));
+      setSettingUp(false);
+      return;
+    }
+
+    const acceptResult = Array.isArray(acceptData) ? acceptData[0] : null;
+
+    if (!acceptResult || acceptResult.status !== "accepted") {
+      setState((s) => ({
+        ...s,
+        error: "招待の受諾結果を確認できませんでした。もう一度お試しください。",
+      }));
+      setSettingUp(false);
+      return;
+    }
+
+    setSettingUp(false);
+    setJoined(true);
+    window.setTimeout(() => {
+      window.location.assign("/");
+    }, 3000);
   };
 
   const handleAcceptInvite = async () => {
@@ -263,22 +347,72 @@ export default function InviteAcceptPage() {
                 >
                   {state.accepting ? "参加中..." : "この招待で参加する"}
                 </PrimaryButton>
-              ) : passwordResetSent ? (
-                <p className="text-sm leading-7 text-[var(--text-secondary)]">
-                  パスワード設定用のメールをお送りしました。メール内のリンクからパスワードを設定してください。
-                </p>
+              ) : joined ? (
+                <div className="flex flex-col items-center gap-4 py-4 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-[24px] bg-[var(--surface-accent)]">
+                    <svg viewBox="0 0 24 24" className="h-9 w-9 fill-none stroke-[var(--brand-primary-strong)]" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M8 12l3 3 5-5" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                    家族への参加が完了しました
+                  </h2>
+                  <p className="text-sm leading-7 text-[var(--text-secondary)]">
+                    これでファミマネを利用できるようになりました。
+                  </p>
+                  <PrimaryButton onClick={() => window.location.assign("/")}>
+                    ホームへ移動する
+                  </PrimaryButton>
+                  <p className="text-xs text-[var(--text-muted)]">3秒後に自動で移動します。</p>
+                </div>
               ) : (
                 <>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    招待文に記載されている登録メールアドレスを入力してください。
+                  </p>
+                  <label className="flex flex-col gap-1.5 text-sm font-medium text-[var(--text-primary)]">
+                    登録メールアドレス
+                    <input
+                      type="email"
+                      value={inputEmail}
+                      onChange={(e) => setInputEmail(e.target.value)}
+                      placeholder="invited@example.com"
+                      className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm font-medium text-[var(--text-primary)]">
+                    パスワード
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="6文字以上"
+                      className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500"
+                      minLength={6}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm font-medium text-[var(--text-primary)]">
+                    確認用パスワード
+                    <input
+                      type="password"
+                      value={passwordConfirmation}
+                      onChange={(e) => setPasswordConfirmation(e.target.value)}
+                      placeholder="もう一度入力"
+                      className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500"
+                      minLength={6}
+                    />
+                  </label>
                   <PrimaryButton
-                    onClick={handleSetupPassword}
+                    onClick={handleSetupAndAccept}
                     disabled={
-                      sendingPasswordReset ||
+                      settingUp ||
                       !state.inviteDetails ||
                       state.inviteDetails.is_expired ||
                       state.inviteDetails.effective_status !== "pending"
                     }
                   >
-                    {sendingPasswordReset ? "送信中..." : "パスワードを設定する"}
+                    {settingUp ? "設定中..." : "パスワードを設定して参加する"}
                   </PrimaryButton>
                   <LegalLoginNotice
                     className="text-sm leading-7 text-[var(--text-secondary)]"

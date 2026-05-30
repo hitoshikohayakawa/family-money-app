@@ -27,24 +27,6 @@ function normalizeDisplayName(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function generateInitialPassword() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
-
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
-}
-
-function mergeUserMetadata(
-  metadata: Record<string, unknown> | null | undefined,
-  initialPasswordIssuedAt: string
-) {
-  return {
-    ...(metadata ?? {}),
-    requires_password_setup: true,
-    initial_password_issued_at: initialPasswordIssuedAt,
-  };
-}
-
 async function findUserByEmail(
   adminClient: SupabaseClient,
   email: string
@@ -211,29 +193,11 @@ export async function POST(request: Request) {
     }
   }
 
-  const initialPassword = generateInitialPassword();
-  const issuedAt = new Date().toISOString();
-
-  if (invitedUser) {
-    const { error: updateUserError } = await adminClient.auth.admin.updateUserById(
-      invitedUser.id,
-      {
-        password: initialPassword,
-        email_confirm: true,
-        user_metadata: mergeUserMetadata(invitedUser.user_metadata, issuedAt),
-      }
-    );
-
-    if (updateUserError) {
-      return jsonError(`初期パスワードの発行に失敗しました: ${updateUserError.message}`, 500);
-    }
-  } else {
+  if (!invitedUser) {
     const { data: createdUserData, error: createUserError } =
       await adminClient.auth.admin.createUser({
         email,
-        password: initialPassword,
         email_confirm: true,
-        user_metadata: mergeUserMetadata(null, issuedAt),
       });
 
     if (createUserError || !createdUserData.user) {
@@ -271,8 +235,5 @@ export async function POST(request: Request) {
     return jsonError(`招待の作成に失敗しました: ${inviteError.message}`, 500);
   }
 
-  return NextResponse.json({
-    invite,
-    initialPassword,
-  });
+  return NextResponse.json({ invite });
 }
