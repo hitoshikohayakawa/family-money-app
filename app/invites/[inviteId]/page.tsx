@@ -1,14 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import EmptyState from "@/app/components/ui/empty-state";
 import PageContainer from "@/app/components/ui/page-container";
 import PrimaryButton from "@/app/components/ui/primary-button";
-import SecondaryButton from "@/app/components/ui/secondary-button";
 import SectionCard from "@/app/components/ui/section-card";
 import StatusBadge from "@/app/components/ui/status-badge";
 import { formatFamilyRole, formatInviteStatus, inviteStatusTone } from "@/app/components/ui/family-labels";
@@ -36,12 +34,9 @@ type InvitePageState = {
 
 export default function InviteAcceptPage() {
   const params = useParams<{ inviteId: string }>();
-  const router = useRouter();
   const inviteId = params.inviteId;
-  const loginHref = useMemo(
-    () => `/login?next=${encodeURIComponent(`/invites/${inviteId}`)}`,
-    [inviteId]
-  );
+  const [passwordResetSent, setPasswordResetSent] = useState(false);
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
   const [state, setState] = useState<InvitePageState>({
     loading: true,
     accepting: false,
@@ -96,9 +91,7 @@ export default function InviteAcceptPage() {
       setState({
         loading: false,
         accepting: false,
-        error: sessionData.session?.user
-          ? ""
-          : "招待を受け取るには先にログインしてください。",
+        error: "",
         successMessage: "",
         email: sessionData.session?.user?.email ?? null,
         inviteDetails: inviteDetails ?? null,
@@ -112,16 +105,19 @@ export default function InviteAcceptPage() {
     };
   }, [inviteId]);
 
-  const loginHrefWithInviteEmail = state.inviteDetails?.email
-    ? `${loginHref}&email=${encodeURIComponent(state.inviteDetails.email)}`
-    : loginHref;
+  const handleSetupPassword = async () => {
+    if (!state.inviteDetails?.email) return;
+    setSendingPasswordReset(true);
+    const redirectTo =
+      `${window.location.origin}/setup-password` +
+      `?next=${encodeURIComponent(`/invites/${inviteId}`)}` +
+      `&mode=reset`;
+    await supabase.auth.resetPasswordForEmail(state.inviteDetails.email, { redirectTo });
+    setSendingPasswordReset(false);
+    setPasswordResetSent(true);
+  };
 
   const handleAcceptInvite = async () => {
-    if (!state.email) {
-      router.push(loginHrefWithInviteEmail);
-      return;
-    }
-
     setState((currentState) => ({
       ...currentState,
       accepting: true,
@@ -207,7 +203,7 @@ export default function InviteAcceptPage() {
             {state.inviteDetails ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[var(--radius-lg)] bg-[var(--surface-card-strong)] px-4 py-4">
-                  <p className="text-sm font-semibold text-[var(--text-secondary)]">招待先メール</p>
+                  <p className="text-sm font-semibold text-[var(--text-secondary)]">参加するメールアドレス</p>
                   <p className="mt-2 break-all text-base font-semibold text-[var(--text-primary)]">
                     {state.inviteDetails.email}
                   </p>
@@ -234,11 +230,11 @@ export default function InviteAcceptPage() {
                     {new Date(state.inviteDetails.expires_at).toLocaleString("ja-JP")}
                   </p>
                 </div>
-                <div className="sm:col-span-2">
-                  <StatusBadge tone={state.inviteDetails.is_expired ? "danger" : "success"}>
-                    {state.inviteDetails.is_expired ? "この招待は期限切れです" : "この招待はまだ使えます"}
-                  </StatusBadge>
-                </div>
+                {state.inviteDetails.is_expired ? (
+                  <div className="sm:col-span-2">
+                    <StatusBadge tone="danger">この招待は期限切れです</StatusBadge>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <EmptyState
@@ -247,52 +243,50 @@ export default function InviteAcceptPage() {
               />
             )}
 
-            <p className="mt-4 text-sm text-[var(--text-secondary)]">
-              現在のログインメール: {state.email ?? "未ログイン"}
-            </p>
-
             {state.email && state.inviteDetails && state.email !== state.inviteDetails.email ? (
-              <p className="mt-3 text-sm text-[var(--danger)]">
-                いまのメールアドレスでは参加できません。招待先のメールでログインしてください。
+              <p className="mt-4 text-sm text-[var(--danger)]">
+                ログイン中のメールアドレス（{state.email}）と招待先が異なります。招待先のメールアドレスでログインし直してください。
               </p>
-            ) : (
-              <p className="mt-3 text-sm text-[var(--text-secondary)]">
-                招待を受け取ったメールアドレスでログインしているか確認しましょう。
-              </p>
-            )}
+            ) : null}
 
             <div className="mt-6 flex flex-col gap-3">
-              <PrimaryButton
-                onClick={handleAcceptInvite}
-                disabled={
-                  state.accepting ||
-                  !state.inviteDetails ||
-                  state.inviteDetails.is_expired ||
-                  state.inviteDetails.effective_status !== "pending" ||
-                  Boolean(state.email && state.email !== state.inviteDetails.email)
-                }
-              >
-                {state.accepting
-                  ? "参加中..."
-                  : state.email
-                    ? "この招待で参加する"
-                    : "ログインしてこの招待で参加する"}
-              </PrimaryButton>
-
-              {!state.email ? (
+              {state.email ? (
+                <PrimaryButton
+                  onClick={handleAcceptInvite}
+                  disabled={
+                    state.accepting ||
+                    !state.inviteDetails ||
+                    state.inviteDetails.is_expired ||
+                    state.inviteDetails.effective_status !== "pending" ||
+                    state.email !== state.inviteDetails.email
+                  }
+                >
+                  {state.accepting ? "参加中..." : "この招待で参加する"}
+                </PrimaryButton>
+              ) : passwordResetSent ? (
+                <p className="text-sm leading-7 text-[var(--text-secondary)]">
+                  パスワード設定用のメールをお送りしました。メール内のリンクからパスワードを設定してください。
+                </p>
+              ) : (
                 <>
-                  <Link
-                    href={loginHrefWithInviteEmail}
-                    className="inline-flex"
+                  <PrimaryButton
+                    onClick={handleSetupPassword}
+                    disabled={
+                      sendingPasswordReset ||
+                      !state.inviteDetails ||
+                      state.inviteDetails.is_expired ||
+                      state.inviteDetails.effective_status !== "pending"
+                    }
                   >
-                    <SecondaryButton>ログインページへ</SecondaryButton>
-                  </Link>
+                    {sendingPasswordReset ? "送信中..." : "パスワードを設定する"}
+                  </PrimaryButton>
                   <LegalLoginNotice
                     className="text-sm leading-7 text-[var(--text-secondary)]"
                     linkClassName="underline underline-offset-4"
+                    suffix="に同意の上登録を実施してください。"
                   />
                 </>
-              ) : null}
+              )}
             </div>
 
             {state.successMessage ? (

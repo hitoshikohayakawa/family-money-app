@@ -64,7 +64,6 @@ type FamilyInvitesState = {
   successMessage: string;
   copiedInviteId: string | null;
   copiedShareTextInviteId: string | null;
-  initialPasswordsByInviteId: Record<string, string>;
   membership: FamilyMembership | null;
   invites: FamilyInvite[];
 };
@@ -82,10 +81,10 @@ export default function FamilyInvitesPanel() {
     successMessage: "",
     copiedInviteId: null,
     copiedShareTextInviteId: null,
-    initialPasswordsByInviteId: {},
     membership: null,
     invites: [],
   });
+  const [createdInviteModal, setCreatedInviteModal] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -109,7 +108,6 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
-          initialPasswordsByInviteId: {},
           membership: null,
           invites: [],
         });
@@ -125,7 +123,6 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
-          initialPasswordsByInviteId: {},
           membership: null,
           invites: [],
         });
@@ -152,7 +149,6 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
-          initialPasswordsByInviteId: {},
           membership: null,
           invites: [],
         });
@@ -168,7 +164,6 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
-          initialPasswordsByInviteId: {},
           membership: null,
           invites: [],
         });
@@ -190,7 +185,6 @@ export default function FamilyInvitesPanel() {
           successMessage: "",
           copiedInviteId: null,
           copiedShareTextInviteId: null,
-          initialPasswordsByInviteId: {},
           membership,
           invites: [],
         });
@@ -297,7 +291,7 @@ export default function FamilyInvitesPanel() {
 
     const result = (await response.json().catch(() => null)) as CreatedInviteResponse | null;
 
-    if (!response.ok || !result?.invite || !result.initialPassword) {
+    if (!response.ok || !result?.invite) {
       setState((currentState) => ({
         ...currentState,
         submitting: false,
@@ -311,7 +305,6 @@ export default function FamilyInvitesPanel() {
     }
 
     const createdInvite = result.invite;
-    const initialPassword = result.initialPassword;
     const { data: invites, error: invitesError } = await fetchFamilyInvites();
 
     setInviteEmail("");
@@ -323,12 +316,9 @@ export default function FamilyInvitesPanel() {
         submitting: false,
         revokingInviteId: null,
         error: `招待は作成されましたが一覧の再取得に失敗しました: ${invitesError.message}`,
-        successMessage: "招待を作成しました。共有文に初期パスワードを含めて送れます。",
-        initialPasswordsByInviteId: {
-          ...currentState.initialPasswordsByInviteId,
-          [createdInvite.id]: initialPassword,
-        },
+        successMessage: "",
       }));
+      setCreatedInviteModal(createdInvite.id);
       return;
     }
 
@@ -337,13 +327,10 @@ export default function FamilyInvitesPanel() {
       submitting: false,
       revokingInviteId: null,
       error: "",
-      successMessage: "招待を作成しました。共有文に初期パスワードを含めて送れます。",
-      initialPasswordsByInviteId: {
-        ...currentState.initialPasswordsByInviteId,
-        [createdInvite.id]: initialPassword,
-      },
+      successMessage: "",
       invites: Array.isArray(invites) ? (invites as FamilyInvite[]) : [],
     }));
+    setCreatedInviteModal(createdInvite.id);
   };
 
   const handleRevokeInvite = async (inviteId: string) => {
@@ -426,25 +413,13 @@ export default function FamilyInvitesPanel() {
 
   const handleCopyShareText = async (inviteId: string) => {
     const inviteUrl = `${window.location.origin}/invites/${inviteId}`;
-    const invite = state.invites.find((candidate) => candidate.id === inviteId);
-    const initialPassword = state.initialPasswordsByInviteId[inviteId];
-    const shareText = initialPassword
-      ? [
-          "家族マネーアプリ「ファミマネ」への招待です。",
-          "",
-          `ログインメール: ${invite?.email ?? ""}`,
-          `初期パスワード: ${initialPassword}`,
-          `招待リンク: ${inviteUrl}`,
-          "",
-          "初回ログイン後に新しいパスワードを設定してください。",
-        ].join("\n")
-      : [
-          "家族マネーアプリ「ファミマネ」への招待です。",
-          "以下のリンクを開いて参加してください。",
-          inviteUrl,
-          "",
-          "初期パスワードが必要な場合は、招待を作成した人に確認してください。",
-        ].join("\n");
+    const shareText = [
+      "家族マネーアプリ「ファミマネ」への招待です。",
+      "以下のリンクから参加してください。",
+      `招待リンク: ${inviteUrl}`,
+      "",
+      "リンクを開いて、パスワードを設定すると参加できます。",
+    ].join("\n");
 
     try {
       await navigator.clipboard.writeText(shareText);
@@ -486,10 +461,40 @@ export default function FamilyInvitesPanel() {
   }
 
   return (
-    <SectionCard
-      title="家族への招待"
-      description="招待をつくると、家族が自分のペースで参加できます。"
-    >
+    <>
+      {createdInviteModal ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-4 sm:items-center sm:pb-0">
+          <div className="w-full max-w-md rounded-[32px] bg-white p-6 shadow-[0_24px_64px_rgba(0,0,0,0.18)] sm:p-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-[var(--surface-accent)]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8 fill-none stroke-[var(--brand-primary-strong)]" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 12l3 3 5-5" />
+              </svg>
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-[var(--text-primary)]">
+              招待リンクを作成しました
+            </h2>
+            <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
+              招待リンクを作成しました。招待したい家族にリンク、または招待文を送ってください。
+            </p>
+            <div className="mt-5 flex flex-col gap-3">
+              <PrimaryButton onClick={() => handleCopyInviteLink(createdInviteModal)}>
+                {state.copiedInviteId === createdInviteModal ? "コピーしました" : "招待リンクをコピー"}
+              </PrimaryButton>
+              <SecondaryButton onClick={() => handleCopyShareText(createdInviteModal)}>
+                {state.copiedShareTextInviteId === createdInviteModal ? "コピーしました" : "招待文をコピー"}
+              </SecondaryButton>
+              <SecondaryButton onClick={() => setCreatedInviteModal(null)}>
+                閉じる
+              </SecondaryButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <SectionCard
+        title="家族への招待"
+        description="招待をつくると、家族が自分のペースで参加できます。"
+      >
       {state.loading ? (
         <p className="text-sm text-[var(--text-secondary)]">読み込み中です。</p>
       ) : !state.membership ? (
@@ -726,5 +731,6 @@ export default function FamilyInvitesPanel() {
         </div>
       )}
     </SectionCard>
+    </>
   );
 }

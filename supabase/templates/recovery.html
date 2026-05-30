@@ -1,15 +1,34 @@
-<p>いつも家族マネーアプリ「ファミマネ」をご利用いただきありがとうございます。</p>
+<div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1F2D20;">
 
-<p>パスワード再設定のリクエストを受け付けました。</p>
+  <p style="font-size: 18px; font-weight: bold; margin: 0 0 8px;">
+    パスワードの設定をお願いします
+  </p>
 
-<p>以下のリンクから、新しいパスワードを設定してください。</p>
+  <p style="font-size: 14px; line-height: 1.8; color: #516251; margin: 0 0 24px;">
+    ファミマネのパスワード設定リンクをお送りしました。<br>
+    下のボタンをクリックして、パスワードを設定してください。
+  </p>
 
-<p>▼パスワードを再設定する</p>
+  <a href="{{ .ConfirmationURL }}"
+     style="display: inline-block; background-color: #4BAF57; color: #ffffff; text-decoration: none;
+            font-size: 15px; font-weight: bold; padding: 14px 28px;
+            border-radius: 999px; margin-bottom: 32px;">
+    パスワードを設定する
+  </a>
 
-<p><a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a></p>
+  <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;">
 
-<p>※リンクの有効期限には制限があります。</p>
+  <p style="font-size: 12px; line-height: 1.8; color: #7A8D7A; margin: 0 0 8px;">
+    ボタンが開けない場合は、以下の URL をブラウザにコピーしてください。
+  </p>
+  <p style="font-size: 12px; word-break: break-all; color: #516251; margin: 0 0 24px;">
+    {{ .ConfirmationURL }}
+  </p>
 
-<p>※このメールに心当たりがない場合は、メールを破棄してください。</p>
+  <p style="font-size: 12px; line-height: 1.8; color: #7A8D7A; margin: 0;">
+    ※リンクの有効期限には制限があります。<br>
+    ※このメールにお心当たりのない場合は、破棄してください。<br>
+    ご自身でリクエストしていない場合、アカウントは変更されません。
+  </p>
 
-<p>第三者によってアカウントが変更されることはありませんのでご安心ください。</p>
+</div>

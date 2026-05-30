@@ -29,16 +29,18 @@ export function LegalLinks({ linkClassName = "" }: LegalLinksProps) {
 type LegalLoginNoticeProps = {
   className?: string;
   linkClassName?: string;
+  suffix?: string;
 };
 
 export function LegalLoginNotice({
   className = "",
   linkClassName = "",
+  suffix = "に同意の上ログインしてください。",
 }: LegalLoginNoticeProps) {
   return (
     <p className={className}>
       <LegalLinks linkClassName={linkClassName} />
-      {" に同意の上ログインしてください。"}
+      {" "}{suffix}
     </p>
   );
 }

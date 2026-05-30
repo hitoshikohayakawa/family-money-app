@@ -106,7 +106,7 @@ function SetupPasswordPageContent() {
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
           {isResetMode
             ? "メール内のリンクで本人確認できました。新しいパスワードを設定してください。"
-            : "受け取った初期パスワードから、使いやすい新しいパスワードへ変更します。"}
+            : "ファミマネで使うパスワードを設定してください。"}
         </p>
 
         {loading ? (

@@ -27,9 +27,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ファミマネ",
     description: "家族でたのしくお金を学ぶアプリ",
+    url: siteUrl,
+  type: "website",
     images: [
       {
-        url: "/famimane_ogp.png",
+        url: "/famimane_ogp.png?v=2",
         width: 1733,
         height: 907,
         alt: "ファミマネのOGP画像",
@@ -43,7 +45,7 @@ export const metadata: Metadata = {
     description: "家族でたのしくお金を学ぶアプリ",
     images: [
       {
-        url: "/famimane_ogp.png",
+        url: "/famimane_ogp.png?v=2",
         width: 1733,
         height: 907,
         alt: "ファミマネのOGP画像",

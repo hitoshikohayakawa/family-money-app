@@ -39,6 +39,8 @@ function RegisterPageContent() {
   const [agreedToPolicies, setAgreedToPolicies] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   useEffect(() => {
     let isActive = true;
@@ -99,6 +101,7 @@ function RegisterPageContent() {
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`,
         data: {
           display_name: normalizedDisplayName,
           requires_password_setup: false,
@@ -112,26 +115,12 @@ function RegisterPageContent() {
       return;
     }
 
-    if (data.user) {
-      const { error: profileError } = await supabase.from("profiles").upsert(
-        {
-          id: data.user.id,
-          email: data.user.email ?? email,
-          display_name: normalizedDisplayName,
-        },
-        {
-          onConflict: "id",
-        }
-      );
-
-      if (profileError) {
-        setErrorMessage(`プロフィールの作成に失敗しました: ${profileError.message}`);
-        setIsSubmitting(false);
-        return;
-      }
+    if (data.session) {
+      router.replace(nextPath);
+    } else {
+      setRegisteredEmail(email);
+      setRegistrationComplete(true);
     }
-
-    router.replace(nextPath);
   };
 
   return (
@@ -144,93 +133,116 @@ function RegisterPageContent() {
           名前、メールアドレス、パスワードを設定して使い始めます。
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-          <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-            名前
-            <input
-              type="text"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              placeholder="例: 小早川"
-              className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              required
-            />
-          </label>
+        {registrationComplete ? (
+          <div className="mt-6 flex flex-col gap-4">
+            <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
+              確認メールを送りました
+            </p>
+            <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              <strong>{registeredEmail}</strong> にメールを送りました。
+              メール内のリンクをクリックして、メールアドレスを確認してください。
+            </p>
+            <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              メールが届かない場合は、迷惑メールフォルダもご確認ください。
+            </p>
+            <Link
+              href={`/login?next=${encodeURIComponent(nextPath)}`}
+              className="text-sm text-zinc-700 underline underline-offset-4 dark:text-zinc-300"
+            >
+              ログインページへ
+            </Link>
+          </div>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+              <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                名前
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  placeholder="例: 小早川"
+                  className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+                  required
+                />
+              </label>
 
-          <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-            メールアドレス
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-              className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              required
-            />
-          </label>
+              <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                メールアドレス
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+                  required
+                />
+              </label>
 
-          <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-            パスワード
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="6文字以上"
-              className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              required
-              minLength={6}
-            />
-          </label>
+              <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                パスワード
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="6文字以上"
+                  className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+                  required
+                  minLength={6}
+                />
+              </label>
 
-          <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-            確認用パスワード
-            <input
-              type="password"
-              value={passwordConfirmation}
-              onChange={(event) => setPasswordConfirmation(event.target.value)}
-              placeholder="もう一度入力"
-              className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-              required
-              minLength={6}
-            />
-          </label>
+              <label className="flex flex-col gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                確認用パスワード
+                <input
+                  type="password"
+                  value={passwordConfirmation}
+                  onChange={(event) => setPasswordConfirmation(event.target.value)}
+                  placeholder="もう一度入力"
+                  className="rounded-lg border border-zinc-300 px-4 py-3 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+                  required
+                  minLength={6}
+                />
+              </label>
 
-          <label className="flex items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-sm leading-6 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
-            <input
-              type="checkbox"
-              checked={agreedToPolicies}
-              onChange={(event) => setAgreedToPolicies(event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-zinc-300 text-black focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950"
-            />
-            <span>
-              <LegalLinks linkClassName="underline underline-offset-4" />
-              {" に同意する"}
-            </span>
-          </label>
+              <label className="flex items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-sm leading-6 text-zinc-700 dark:border-zinc-800 dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={agreedToPolicies}
+                  onChange={(event) => setAgreedToPolicies(event.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-zinc-300 text-black focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950"
+                />
+                <span>
+                  <LegalLinks linkClassName="underline underline-offset-4" />
+                  {" に同意する"}
+                </span>
+              </label>
 
-          <button
-            type="submit"
-            disabled={isSubmitting || !agreedToPolicies}
-            className="rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-300"
-          >
-            {isSubmitting ? "登録中..." : "新規登録する"}
-          </button>
-        </form>
+              <button
+                type="submit"
+                disabled={isSubmitting || !agreedToPolicies}
+                className="rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-black dark:hover:bg-zinc-300"
+              >
+                {isSubmitting ? "登録中..." : "新規登録する"}
+              </button>
+            </form>
 
-        <div className="mt-5 text-sm">
-          <Link
-            href={`/login?next=${encodeURIComponent(nextPath)}`}
-            className="text-zinc-700 underline underline-offset-4 dark:text-zinc-300"
-          >
-            ログインページへ戻る
-          </Link>
-        </div>
+            <div className="mt-5 text-sm">
+              <Link
+                href={`/login?next=${encodeURIComponent(nextPath)}`}
+                className="text-zinc-700 underline underline-offset-4 dark:text-zinc-300"
+              >
+                ログインページへ戻る
+              </Link>
+            </div>
 
-        {errorMessage ? (
-          <p className="mt-4 text-sm text-red-600 dark:text-red-400">
-            {errorMessage}
-          </p>
-        ) : null}
+            {errorMessage ? (
+              <p className="mt-4 text-sm text-red-600 dark:text-red-400">
+                {errorMessage}
+              </p>
+            ) : null}
+          </>
+        )}
       </main>
     </div>
   );
