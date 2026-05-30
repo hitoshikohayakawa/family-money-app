@@ -4,7 +4,7 @@ import {
   createServiceRoleServerClient,
   hasServerSupabaseEnv,
 } from "@/lib/server-supabase";
-import { sendNotificationEmail } from "@/lib/email-notifications";
+import { sendNotificationEmail, buildGuardianPaymentRequestHtml } from "@/lib/email-notifications";
 
 export const runtime = "nodejs";
 
@@ -102,20 +102,34 @@ export async function POST(request: Request) {
   if (grant) {
     const guardianEmails = await fetchGuardianEmails(grant.family_id);
 
+    const amountFormatted = formatCurrency(grant.amount_jpy);
     await sendNotificationEmail({
       to: guardianEmails,
       subject: "【ファミマネ】支払い申請が届きました",
       text: [
-        "支払い申請が届きました。",
+        `${grant.child_display_label}さんから払い出し申請が来ました！`,
         "",
         `子ども：${grant.child_display_label}`,
-        `金額：${formatCurrency(grant.amount_jpy)}`,
+        `金額：${amountFormatted}`,
+        "内容：すぐもらう",
         "",
-        "子どもにお金を渡したら、",
+        `${grant.child_display_label}さんにお金を渡したら、`,
         "ファミマネで「渡した」ボタンを押してください。",
         "",
+        "また、お金を渡すだけでなく、",
+        "どうして今払い出しを行ったのかを話し合ってみてください。",
+        "",
         siteUrl,
+        "",
+        "家族と学ぶお金学習アプリ",
+        "〜〜 ファミマネ 〜〜",
       ].join("\n"),
+      html: buildGuardianPaymentRequestHtml({
+        childName: grant.child_display_label,
+        amount: amountFormatted,
+        requestType: "すぐもらう",
+        appUrl: siteUrl,
+      }),
     }).catch(() => {
       // 操作成功を優先し、メール失敗ではUI操作を失敗扱いにしません。
     });

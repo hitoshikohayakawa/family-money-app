@@ -4,7 +4,7 @@ import {
   createServiceRoleServerClient,
   hasServerSupabaseEnv,
 } from "@/lib/server-supabase";
-import { sendNotificationEmail } from "@/lib/email-notifications";
+import { sendNotificationEmail, buildGuardianPaymentRequestHtml } from "@/lib/email-notifications";
 
 export const runtime = "nodejs";
 
@@ -107,20 +107,34 @@ export async function POST(request: Request) {
   if (cashoutRequest) {
     const guardianEmails = await fetchGuardianEmails(cashoutRequest.family_id);
 
+    const amountFormatted = formatCurrency(cashoutRequest.requested_amount_jpy);
     await sendNotificationEmail({
       to: guardianEmails,
       subject: "【ファミマネ】支払い申請が届きました",
       text: [
-        "支払い申請が届きました。",
+        `${cashoutRequest.child_display_label}さんから払い出し申請が来ました！`,
         "",
         `子ども：${cashoutRequest.child_display_label}`,
-        `金額：${formatCurrency(cashoutRequest.requested_amount_jpy)}`,
+        `金額：${amountFormatted}`,
+        "内容：投資したお小遣いの払い出し",
         "",
-        "子どもにお金を渡したら、",
+        `${cashoutRequest.child_display_label}さんにお金を渡したら、`,
         "ファミマネで「渡した」ボタンを押してください。",
         "",
+        "また、お金を渡すだけでなく、",
+        "どうして今払い出しを行ったのかを話し合ってみてください。",
+        "",
         siteUrl,
+        "",
+        "家族と学ぶお金学習アプリ",
+        "〜〜 ファミマネ 〜〜",
       ].join("\n"),
+      html: buildGuardianPaymentRequestHtml({
+        childName: cashoutRequest.child_display_label,
+        amount: amountFormatted,
+        requestType: "投資したお小遣いの払い出し",
+        appUrl: siteUrl,
+      }),
     }).catch(async (emailError: unknown) => {
       const adminClient = createServiceRoleServerClient();
       await adminClient.from("allowance_notification_logs").insert({
