@@ -2414,9 +2414,14 @@ export default function AllowanceGrantsPanel({
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-3">
                                         <InvestmentCategoryIcon categoryCode={categoryCode} />
-                                        <p className="truncate text-[1.05rem] font-extrabold text-[var(--text-primary)]">
-                                          {grant.decision_asset_name ?? "投資先"}
-                                        </p>
+                                        <div className="min-w-0">
+                                          <p className="truncate text-[1.05rem] font-extrabold text-[var(--text-primary)]">
+                                            {grant.decision_asset_name ?? "投資先"}
+                                          </p>
+                                          <p className="mt-0.5 text-[0.75rem] text-[var(--text-muted)]">
+                                            {isElementaryChildMode ? "くれたひと" : "くれたひと"}：{grant.granted_by_display_label}
+                                          </p>
+                                        </div>
                                       </div>
 
                                       <div className="mt-3 grid grid-cols-[auto_1fr] items-end gap-x-4 gap-y-2 rounded-[18px] bg-[rgba(244,251,245,0.72)] px-3 py-3">
@@ -2803,6 +2808,9 @@ export default function AllowanceGrantsPanel({
                     >
                       <p className="font-bold text-[var(--text-primary)]">
                         {grant.decision_asset_name ?? "投資"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                        くれたひと：{grant.granted_by_display_label}
                       </p>
                       <p className="mt-1 text-[var(--text-secondary)]">
                         申請額: {formatCurrency(getGrantMarketValue(grant))}

@@ -84,7 +84,9 @@ export async function POST(request: Request) {
     return jsonError(`担当保護者の取得に失敗しました: ${grantsInfoError.message}`, 500);
   }
 
-  // Group grant IDs by guardian
+  // Group grant IDs by guardian.
+  // If lookup fails or returns no results, fall back to one group with all IDs
+  // so the RPC can still create the cashout request (granted_by_user_id will be null).
   const guardianGroups = new Map<string, string[]>();
   for (const grant of (grantsInfo ?? []) as GrantGrantedBy[]) {
     const gId = grant.granted_by_user_id;
@@ -94,7 +96,8 @@ export async function POST(request: Request) {
   }
 
   if (guardianGroups.size === 0) {
-    return jsonError("引き出すお小遣いの担当保護者を特定できませんでした。", 500);
+    // Fallback: no guardian info available, process all grants as one group with no notification
+    guardianGroups.set("", grantIds);
   }
 
   // Fetch guardian profiles for notification
