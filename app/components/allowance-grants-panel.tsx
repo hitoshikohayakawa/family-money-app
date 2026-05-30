@@ -1554,8 +1554,6 @@ export default function AllowanceGrantsPanel({
       ? (guardianInvestmentGain / guardianVisibleInvestedPrincipal) * 100
       : 0;
   const totalInvestmentGainSign = totalInvestmentGain >= 0 ? "+" : "";
-  const totalInvestmentGainTone =
-    totalInvestmentGain >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
   const guardianInvestmentGainSign = guardianInvestmentGain >= 0 ? "+" : "";
   const guardianInvestmentGainTone =
     guardianInvestmentGain >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]";
@@ -2121,44 +2119,25 @@ export default function AllowanceGrantsPanel({
           {viewMode === "main" && isChild ? (
             <div className="space-y-5">
               <div className="overflow-hidden rounded-[32px] border border-[rgba(76,163,104,0.18)] bg-[linear-gradient(145deg,rgba(233,248,239,0.98),rgba(255,255,255,0.98))] p-5 shadow-[0_16px_36px_rgba(51,101,63,0.1)]">
-                <div className="grid grid-cols-[minmax(0,1fr)_112px] items-start gap-3 sm:grid-cols-[minmax(0,1fr)_136px] sm:gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-5">
-                  <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold tracking-[0.04em] text-[var(--text-secondary)]">
                       {isElementaryChildMode ? "いまの おこづかい" : "いまのお小遣い"}
                     </p>
-                    <p className="mt-3 text-[2.9rem] font-black leading-none text-[var(--text-primary)] sm:text-[3.4rem]">
+                    <p className="mt-2 text-[2.6rem] font-black leading-none text-[var(--text-primary)] sm:text-[3.2rem]">
                       {formatCurrency(totalMarketValue)}
                     </p>
-                    <div className="mt-4 inline-flex items-center gap-3 rounded-full bg-white/85 px-4 py-3 shadow-[0_10px_24px_rgba(51,101,63,0.08)]">
-                      <span
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-black ${
-                          totalInvestmentGain >= 0
-                            ? "bg-[rgba(76,163,104,0.14)] text-[var(--success)]"
-                            : "bg-[rgba(239,172,192,0.18)] text-[var(--danger)]"
-                        }`}
-                      >
-                        {totalInvestmentGain >= 0 ? "↗" : "↘"} {formatSignedCurrency(totalInvestmentGain)}
-                      </span>
-                      <span className={`text-base font-bold ${totalInvestmentGainTone}`}>
-                        ({totalInvestmentGainSign}
-                        {formatGainRate(totalInvestmentGainRate)}%)
-                      </span>
-                    </div>
-                    <div className="mt-4 rounded-[22px] bg-white/72 px-4 py-4">
-                      <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                        {isElementaryChildMode ? "ふえた・へった" : "ふえた・へった"}
-                      </p>
-                      <p className={`mt-1 text-2xl font-black ${totalInvestmentGainTone}`}>
-                        {totalInvestmentGainSign}
-                        {formatCurrency(totalInvestmentGain)}
-                      </p>
-                      <p className={`mt-1 text-base font-bold ${totalInvestmentGainTone}`}>
-                        {totalInvestmentGainSign}
-                        {formatGainRate(totalInvestmentGainRate)}%
-                      </p>
+                    <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-black whitespace-nowrap ${
+                      totalInvestmentGain >= 0
+                        ? "bg-[rgba(76,163,104,0.14)] text-[var(--success)]"
+                        : "bg-[rgba(239,172,192,0.18)] text-[var(--danger)]"
+                    }`}>
+                      <span>{totalInvestmentGain >= 0 ? "↗" : "↘"}</span>
+                      <span>{formatSignedCurrency(totalInvestmentGain)}</span>
+                      <span>({totalInvestmentGainSign}{formatGainRate(totalInvestmentGainRate)}%)</span>
                     </div>
                   </div>
-                  <div className="flex justify-end lg:block">
+                  <div className="shrink-0">
                     <ChildAllowanceGraphic />
                   </div>
                 </div>
