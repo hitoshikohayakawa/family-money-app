@@ -27,6 +27,11 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  "https://famimane.app";
+
 async function fetchGuardianEmails(familyId: string) {
   const adminClient = createServiceRoleServerClient();
   const { data: members, error: membersError } = await adminClient
@@ -99,14 +104,17 @@ export async function POST(request: Request) {
 
     await sendNotificationEmail({
       to: guardianEmails,
-      subject: "ファミマネ: お小遣いの受け取り申請が届きました",
+      subject: "【ファミマネ】支払い申請が届きました",
       text: [
-        "ファミマネからのお知らせです。",
+        "支払い申請が届きました。",
         "",
-        `${grant.child_display_label} さんが ${formatCurrency(
-          grant.amount_jpy
-        )} を「すぐにもらう」で申請しました。`,
-        "ファミマネにログインして、支払いが完了したら「子供にお金を払いました」を押してください。",
+        `子ども：${grant.child_display_label}`,
+        `金額：${formatCurrency(grant.amount_jpy)}`,
+        "",
+        "子どもにお金を渡したら、",
+        "ファミマネで「渡した」ボタンを押してください。",
+        "",
+        siteUrl,
       ].join("\n"),
     }).catch(() => {
       // 操作成功を優先し、メール失敗ではUI操作を失敗扱いにしません。

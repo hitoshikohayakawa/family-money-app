@@ -3,26 +3,15 @@ import {
   createAuthenticatedServerClient,
   hasServerSupabaseEnv,
 } from "@/lib/server-supabase";
-import { sendNotificationEmail } from "@/lib/email-notifications";
-
 export const runtime = "nodejs";
 
 type PaidCashoutRequest = {
   cashout_request_id: string;
-  child_email: string | null;
   requested_amount_jpy: number;
 };
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "JPY",
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 export async function POST(
@@ -57,21 +46,6 @@ export async function POST(
   const cashoutRequest = Array.isArray(data)
     ? (data[0] as PaidCashoutRequest | undefined)
     : undefined;
-
-  if (cashoutRequest?.child_email) {
-    await sendNotificationEmail({
-      to: [cashoutRequest.child_email],
-      subject: "ファミマネ: お小遣いの支払いが完了しました",
-      text: [
-        "ファミマネからのお知らせです。",
-        "",
-        `${formatCurrency(cashoutRequest.requested_amount_jpy)} のお小遣いが支払い済みになりました。`,
-        "受け取り履歴から確認できます。",
-      ].join("\n"),
-    }).catch(() => {
-      // 支払い完了自体を優先し、メール失敗ではUI操作を失敗扱いにしません。
-    });
-  }
 
   return NextResponse.json({ cashoutRequest });
 }

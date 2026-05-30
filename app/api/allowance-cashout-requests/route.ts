@@ -27,6 +27,11 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  "https://famimane.app";
+
 async function fetchGuardianEmails(familyId: string) {
   const adminClient = createServiceRoleServerClient();
   const { data: members, error: membersError } = await adminClient
@@ -104,14 +109,17 @@ export async function POST(request: Request) {
 
     await sendNotificationEmail({
       to: guardianEmails,
-      subject: "ファミマネ: お小遣いの引き出し申請が届きました",
+      subject: "【ファミマネ】支払い申請が届きました",
       text: [
-        "ファミマネからのお知らせです。",
+        "支払い申請が届きました。",
         "",
-        `${cashoutRequest.child_display_label} さんから ${formatCurrency(
-          cashoutRequest.requested_amount_jpy
-        )} の引き出し申請が届きました。`,
-        "ファミマネにログインして、支払いが完了したら「子供にお金を払いました」を押してください。",
+        `子ども：${cashoutRequest.child_display_label}`,
+        `金額：${formatCurrency(cashoutRequest.requested_amount_jpy)}`,
+        "",
+        "子どもにお金を渡したら、",
+        "ファミマネで「渡した」ボタンを押してください。",
+        "",
+        siteUrl,
       ].join("\n"),
     }).catch(async (emailError: unknown) => {
       const adminClient = createServiceRoleServerClient();

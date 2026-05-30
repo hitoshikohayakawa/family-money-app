@@ -29,6 +29,11 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  "https://famimane.app";
+
 async function handlePost(request: Request) {
   if (!hasServerSupabaseEnv()) {
     return jsonError("Supabase のサーバー環境変数が不足しています。", 500);
@@ -90,14 +95,16 @@ async function handlePost(request: Request) {
   if (grant?.child_email) {
     await sendNotificationEmail({
       to: [grant.child_email],
-      subject: "ファミマネ: お小遣いが届きました",
+      subject: "【ファミマネ】お小遣いが届きました",
       text: [
-        "ファミマネからのお知らせです。",
+        "お小遣いが追加されました。",
         "",
-        `${grant.granted_by_display_label} さんから ${formatCurrency(
-          grant.amount_jpy
-        )} のお小遣いが届きました。`,
-        "ログインして「すぐにもらう」か「投資する」を選んでください。",
+        `金額：${formatCurrency(grant.amount_jpy)}`,
+        "",
+        "ファミマネを開いて、",
+        "「今すぐもらう」か「投資する」かを選んでください。",
+        "",
+        siteUrl,
       ].join("\n"),
     }).catch(async (emailError: unknown) => {
       await adminClient.from("allowance_notification_logs").insert({

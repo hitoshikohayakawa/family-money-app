@@ -106,6 +106,7 @@ type PendingChoice =
       categoryCode: InvestmentCategoryCode;
     }
   | { type: "cashout_confirm" }
+  | { type: "cashout_sent"; guardianNames: string[] }
   | { type: "paid_confirm"; requestId: string }
   | null;
 
@@ -1340,6 +1341,14 @@ export default function AllowanceGrantsPanel({
       return;
     }
 
+    const guardianNames = [
+      ...new Set(
+        state.grants
+          .filter((g) => selectedCashoutGrantIds.includes(g.id))
+          .map((g) => g.granted_by_display_label)
+      ),
+    ];
+
     setState((currentState) => ({
       ...currentState,
       requestingCashout: true,
@@ -1397,10 +1406,10 @@ export default function AllowanceGrantsPanel({
       ...currentState,
       requestingCashout: false,
       error: "",
-      successMessage: "引き出し申請を送りました。家族へ通知しました。",
+      successMessage: "",
       grants,
     }));
-    setPendingChoice(null);
+    setPendingChoice({ type: "cashout_sent", guardianNames });
   };
 
   const executeMarkCashoutPaid = async (requestId: string) => {
@@ -2166,7 +2175,7 @@ export default function AllowanceGrantsPanel({
                 />
               ) : null}
 
-              {childPendingGrants.length > 0 ? (
+              {childPendingGrants.length > 0 && (
                 <div className="space-y-3">
                   <div className="rounded-[26px] border border-[rgba(241,201,116,0.28)] bg-[linear-gradient(145deg,rgba(255,249,235,0.98),rgba(255,255,255,0.98))] p-4 shadow-[0_14px_30px_rgba(188,148,61,0.08)]">
                     <ChildSectionTitle
@@ -2284,25 +2293,6 @@ export default function AllowanceGrantsPanel({
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : (
-                <div className="rounded-[22px] border border-[rgba(76,163,104,0.14)] bg-[rgba(243,251,244,0.72)] px-4 py-4">
-                  <ChildSectionTitle
-                    tone="success"
-                    icon={
-                      <svg viewBox="0 0 24 24" className="h-6 w-6 fill-none stroke-current" strokeWidth="1.8">
-                        <path d="m5 12 4 4L19 6" />
-                      </svg>
-                    }
-                    title={
-                      isElementaryChildMode ? "まだ やっていないこと" : "まだやっていないこと"
-                    }
-                    description={
-                      isElementaryChildMode
-                        ? "いまは ぜんぶ きめているよ。"
-                        : "いまはやることを決めていないお小遣いはありません。"
-                    }
-                  />
                 </div>
               )}
 
@@ -2831,7 +2821,7 @@ export default function AllowanceGrantsPanel({
                 onClick={executeRequestCashout}
                 disabled={state.requestingCashout || selectedCashoutGrantIds.length === 0}
               >
-                {state.requestingCashout ? "申請中..." : "はい、申請する"}
+                {state.requestingCashout ? "申請中..." : "はい"}
               </PrimaryButton>
               <SecondaryButton type="button" onClick={() => setPendingChoice(null)}>
                 <RubyText tokens={cancelTokens()} />
@@ -2839,6 +2829,34 @@ export default function AllowanceGrantsPanel({
             </div>
           </div>
         </ChoiceModal>
+      ) : null}
+
+      {pendingChoice?.type === "cashout_sent" ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-4 sm:items-center sm:pb-0">
+          <div className="w-full max-w-sm rounded-[32px] bg-white p-6 shadow-[0_24px_64px_rgba(0,0,0,0.18)] sm:p-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-[var(--surface-accent)]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8 fill-none stroke-[var(--brand-primary-strong)]" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 12l3 3 5-5" />
+              </svg>
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-[var(--text-primary)]">
+              {isElementaryChildMode ? "ひきだし しんせいを しました" : "引き出し申請をしました"}
+            </h2>
+            <div className="mt-3 rounded-[20px] bg-[var(--surface-soft)] px-4 py-3">
+              <p className="text-sm leading-6 text-[var(--text-secondary)]">
+                {isElementaryChildMode
+                  ? `つうちは いっていますが、まずは ${pendingChoice.guardianNames.join("・")} さんに しんせいしたことを つたえましょう。`
+                  : `通知は行っていますが、まずは ${pendingChoice.guardianNames.join("・")} さんに申請したことを伝えましょう。`}
+              </p>
+            </div>
+            <div className="mt-5">
+              <PrimaryButton onClick={() => setPendingChoice(null)}>
+                とじる
+              </PrimaryButton>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {pendingChoice?.type === "paid_confirm" && confirmingPaidGroup ? (

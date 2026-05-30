@@ -11,7 +11,7 @@ type SendEmailResult = {
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const notificationEmailFrom =
-  process.env.NOTIFICATION_EMAIL_FROM ?? "ファミマネ <noreply@famimane.app>";
+  process.env.NOTIFICATION_EMAIL_FROM ?? "ファミマネ <noreply@famimane.me>";
 
 export async function sendNotificationEmail({
   to,
