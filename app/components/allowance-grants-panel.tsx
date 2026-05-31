@@ -87,6 +87,7 @@ type AllowanceState = {
   requestingInvestmentGrantId: string | null;
   error: string;
   successMessage: string;
+  userId: string | null;
   membership: FamilyMembership | null;
   members: FamilyMember[];
   grants: AllowanceGrant[];
@@ -825,6 +826,7 @@ export default function AllowanceGrantsPanel({
     requestingInvestmentGrantId: null,
     error: "",
     successMessage: "",
+    userId: null,
     membership: null,
     members: [],
     grants: [],
@@ -856,6 +858,7 @@ export default function AllowanceGrantsPanel({
           requestingInvestmentGrantId: null,
           error: "ログイン状態の確認に失敗しました。",
           successMessage: "",
+          userId: null,
           membership: null,
           members: [],
           grants: [],
@@ -876,6 +879,7 @@ export default function AllowanceGrantsPanel({
           requestingInvestmentGrantId: null,
           error: "",
           successMessage: "",
+          userId: null,
           membership: null,
           members: [],
           grants: [],
@@ -930,6 +934,7 @@ export default function AllowanceGrantsPanel({
           requestingInvestmentGrantId: null,
           error: `家族情報の取得に失敗しました: ${membershipError.message}`,
           successMessage: "",
+          userId: session.user.id,
           membership: null,
           members: [],
           grants: [],
@@ -950,6 +955,7 @@ export default function AllowanceGrantsPanel({
           requestingInvestmentGrantId: null,
           error: `家族メンバーの取得に失敗しました: ${membersResult.error.message}`,
           successMessage: "",
+          userId: session.user.id,
           membership: membership as FamilyMembership | null,
           members: [],
           grants: [],
@@ -970,6 +976,7 @@ export default function AllowanceGrantsPanel({
           requestingInvestmentGrantId: null,
           error: `お小遣い一覧の取得に失敗しました: ${grantsResult.error.message}`,
           successMessage: "",
+          userId: session.user.id,
           membership: membership as FamilyMembership | null,
           members: membersResult.data,
           grants: [],
@@ -990,6 +997,7 @@ export default function AllowanceGrantsPanel({
           requestingInvestmentGrantId: null,
           error: `投資先一覧の取得に失敗しました: ${investmentAssetsResult.error.message}`,
           successMessage: "",
+          userId: session.user.id,
           membership: membership as FamilyMembership | null,
           members: membersResult.data,
           grants: grantsResult.data,
@@ -1012,6 +1020,7 @@ export default function AllowanceGrantsPanel({
         loading: false,
         isAuthenticated: true,
         error: "",
+        userId: session.user.id,
         membership: membership as FamilyMembership | null,
         members: membersResult.data,
         grants: grantsResult.data,
@@ -1497,9 +1506,15 @@ export default function AllowanceGrantsPanel({
   const paidCashoutGroups = cashoutRequests.filter((group) => group.status === "paid");
   const guardianRequestedCashoutGroups =
     !isChild && selectedGuardianChild
-      ? requestedCashoutGroups.filter((group) =>
-          group.grants.some((grant) => grant.child_user_id === selectedGuardianChild.user_id)
-        )
+      ? requestedCashoutGroups.filter((group) => {
+          const forThisChild = group.grants.some(
+            (grant) => grant.child_user_id === selectedGuardianChild.user_id
+          );
+          const ownedByMe =
+            state.membership?.role === "guardian_admin" ||
+            group.grants.some((grant) => grant.granted_by_user_id === state.userId);
+          return forThisChild && ownedByMe;
+        })
       : requestedCashoutGroups;
   const guardianPaidCashoutGroups =
     !isChild && selectedGuardianChild
