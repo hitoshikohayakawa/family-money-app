@@ -1510,9 +1510,9 @@ export default function AllowanceGrantsPanel({
           const forThisChild = group.grants.some(
             (grant) => grant.child_user_id === selectedGuardianChild.user_id
           );
-          const ownedByMe =
-            state.membership?.role === "guardian_admin" ||
-            group.grants.some((grant) => grant.granted_by_user_id === state.userId);
+          const ownedByMe = group.grants.some(
+            (grant) => grant.granted_by_user_id === state.userId
+          );
           return forThisChild && ownedByMe;
         })
       : requestedCashoutGroups;
