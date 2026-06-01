@@ -1,6 +1,7 @@
 import AppHeader from "@/app/components/app-header";
 import FamilyMembersList from "@/app/components/family-members-list";
 import FamilySetup from "@/app/components/family-setup";
+import FooterNav from "@/app/components/ui/footer-nav";
 import PageContainer from "@/app/components/ui/page-container";
 
 export default function FamilyPage() {
@@ -23,8 +24,11 @@ export default function FamilyPage() {
             </p>
           </div>
           <FamilyMembersList />
+          {/* Spacer for fixed FooterNav */}
+          <div className="h-16" />
         </div>
       </PageContainer>
+      <FooterNav />
     </>
   );
 }

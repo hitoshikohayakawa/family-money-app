@@ -24,6 +24,32 @@ export function familyRoleTone(role: string | null) {
   }
 }
 
+// Short labels for home dashboard: guardian_admin / guardian → 親、child → 子ども
+export function formatFamilyRoleShort(role: string | null) {
+  switch (role) {
+    case "guardian_admin":
+    case "guardian":
+      return "親";
+    case "child":
+      return "子ども";
+    default:
+      return "";
+  }
+}
+
+// 親 → info (青系)、子ども → danger (surface-pink でピンク系)
+export function familyRoleShortTone(role: string | null) {
+  switch (role) {
+    case "guardian_admin":
+    case "guardian":
+      return "info" as const;
+    case "child":
+      return "danger" as const;
+    default:
+      return "neutral" as const;
+  }
+}
+
 export function formatInviteStatus(status: string) {
   switch (status) {
     case "pending":

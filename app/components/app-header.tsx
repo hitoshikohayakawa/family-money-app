@@ -163,7 +163,7 @@ export default function AppHeader() {
 
               <nav className="mt-3 grid gap-2">
                 <Link
-                  href="/"
+                  href="/allowance"
                   className="rounded-[18px] px-4 py-3 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-accent)]"
                   onClick={() => setMenuOpen(false)}
                 >
@@ -186,13 +186,6 @@ export default function AppHeader() {
                       onClick={() => setMenuOpen(false)}
                     >
                       家族設定
-                    </Link>
-                    <Link
-                      href="/family#name-settings"
-                      className="rounded-[18px] px-4 py-3 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-accent)]"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      名前を編集
                     </Link>
                     <Link
                       href="/family/invites"
