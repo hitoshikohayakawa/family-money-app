@@ -71,10 +71,11 @@ export async function PATCH(
     return jsonError("リクエスト内容を読み取れませんでした。");
   }
 
-  const displayName =
-    typeof body === "object" && body !== null && "displayName" in body
-      ? normalizeDisplayName(body.displayName)
-      : "";
+  const displayNameProvided =
+    typeof body === "object" && body !== null && "displayName" in body;
+  const displayName = displayNameProvided
+    ? normalizeDisplayName((body as Record<string, unknown>).displayName)
+    : null;
 
   const avatarEmojiInput =
     typeof body === "object" && body !== null && "avatarEmoji" in body
@@ -149,42 +150,47 @@ export async function PATCH(
     }
   }
 
-  const { data: existingProfile, error: existingProfileError } = await adminClient
-    .from("profiles")
-    .select("id, email")
-    .eq("id", userId)
-    .maybeSingle();
+  // Only update profiles when displayName was explicitly sent in the request.
+  // Skipping this when only avatar fields are updated prevents display_name from
+  // being overwritten with null.
+  if (displayNameProvided) {
+    const { data: existingProfile, error: existingProfileError } = await adminClient
+      .from("profiles")
+      .select("id, email")
+      .eq("id", userId)
+      .maybeSingle();
 
-  if (existingProfileError) {
-    return jsonError(`既存プロフィールの確認に失敗しました: ${existingProfileError.message}`, 500);
-  }
-
-  let profileEmail = existingProfile?.email || (user.id === userId ? user.email ?? null : null);
-
-  if (!profileEmail) {
-    const { data: authUserData, error: authUserError } = await adminClient.auth.admin.getUserById(
-      userId
-    );
-
-    if (authUserError) {
-      return jsonError(`メールアドレスの確認に失敗しました: ${authUserError.message}`, 500);
+    if (existingProfileError) {
+      return jsonError(`既存プロフィールの確認に失敗しました: ${existingProfileError.message}`, 500);
     }
 
-    profileEmail = authUserData.user?.email ?? null;
-  }
+    let profileEmail = existingProfile?.email || (user.id === userId ? user.email ?? null : null);
 
-  if (!profileEmail) {
-    return jsonError("プロフィール保存に必要なメールアドレスを取得できませんでした。", 500);
-  }
+    if (!profileEmail) {
+      const { data: authUserData, error: authUserError } = await adminClient.auth.admin.getUserById(
+        userId
+      );
 
-  const { error: profileError } = await adminClient.from("profiles").upsert({
-    id: userId,
-    email: profileEmail,
-    display_name: displayName || null,
-  });
+      if (authUserError) {
+        return jsonError(`メールアドレスの確認に失敗しました: ${authUserError.message}`, 500);
+      }
 
-  if (profileError) {
-    return jsonError(`表示名の保存に失敗しました: ${profileError.message}`, 500);
+      profileEmail = authUserData.user?.email ?? null;
+    }
+
+    if (!profileEmail) {
+      return jsonError("プロフィール保存に必要なメールアドレスを取得できませんでした。", 500);
+    }
+
+    const { error: profileError } = await adminClient.from("profiles").upsert({
+      id: userId,
+      email: profileEmail,
+      display_name: displayName || null,
+    });
+
+    if (profileError) {
+      return jsonError(`表示名の保存に失敗しました: ${profileError.message}`, 500);
+    }
   }
 
   // Update avatar fields in family_memberships if provided
