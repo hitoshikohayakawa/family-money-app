@@ -1,15 +1,22 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import EmptyState from "@/app/components/ui/empty-state";
+import MemberAvatar from "@/app/components/ui/member-avatar";
 import PrimaryButton from "@/app/components/ui/primary-button";
 import SecondaryButton from "@/app/components/ui/secondary-button";
 import SectionCard from "@/app/components/ui/section-card";
 import StatusBadge from "@/app/components/ui/status-badge";
 import { familyRoleTone, formatFamilyRole } from "@/app/components/ui/family-labels";
+
+const EMOJI_OPTIONS = [
+  "🐶","🐱","🐰","🐻","🦁","🐼","🐨","🐯","🦊","🐸",
+  "🐧","🐦","🦋","🌸","⭐","🌈","🚀","🎀","🎸","⚽",
+  "🍎","🍓","🍕","🎂","🌻","🌙","❤️","💚","💙","✨",
+];
 
 type FamilyMember = {
   family_id: string;
@@ -18,6 +25,8 @@ type FamilyMember = {
   email: string | null;
   display_name: string | null;
   display_label: string;
+  avatar_path: string | null;
+  avatar_emoji: string | null;
 };
 
 type FamilyMembersState = {
@@ -33,6 +42,10 @@ export default function FamilyMembersList() {
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [draftDisplayNames, setDraftDisplayNames] = useState<Record<string, string>>({});
+  const [emojiPickerUserId, setEmojiPickerUserId] = useState<string | null>(null);
+  const [savingAvatarUserId, setSavingAvatarUserId] = useState<string | null>(null);
+  const [uploadingUserId, setUploadingUserId] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [state, setState] = useState<FamilyMembersState>({
     loading: true,
     savingUserId: null,
@@ -258,6 +271,105 @@ export default function FamilyMembersList() {
     window.dispatchEvent(new Event(FAMILY_UPDATED_EVENT));
   };
 
+  const handleSaveEmoji = async (member: FamilyMember, emoji: string) => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await getSafeSession(supabase);
+
+    if (sessionError || !session?.access_token) {
+      setState((s) => ({ ...s, error: "ログイン状態の確認に失敗しました。", successMessage: "" }));
+      return;
+    }
+
+    setSavingAvatarUserId(member.user_id);
+
+    try {
+      const response = await fetch(`/api/family-members/${member.user_id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ avatarEmoji: emoji }),
+      });
+
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        setState((s) => ({ ...s, error: result?.error ?? "アイコンの保存に失敗しました。", successMessage: "" }));
+        return;
+      }
+
+      const { data } = await supabase.rpc("list_family_members_for_current_user");
+      const members = Array.isArray(data) ? (data as FamilyMember[]) : [];
+      setState((s) => ({ ...s, error: "", successMessage: "アイコンを保存しました。", members }));
+      setEmojiPickerUserId(null);
+      window.dispatchEvent(new Event(FAMILY_UPDATED_EVENT));
+    } finally {
+      setSavingAvatarUserId(null);
+    }
+  };
+
+  const handleUploadPhoto = async (member: FamilyMember, file: File) => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await getSafeSession(supabase);
+
+    if (sessionError || !session?.access_token) {
+      setState((s) => ({ ...s, error: "ログイン状態の確認に失敗しました。", successMessage: "" }));
+      return;
+    }
+
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setState((s) => ({ ...s, error: "jpeg / png / webp 形式の画像を選んでください。", successMessage: "" }));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setState((s) => ({ ...s, error: "ファイルサイズは5MB以下にしてください。", successMessage: "" }));
+      return;
+    }
+
+    setUploadingUserId(member.user_id);
+
+    try {
+      const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+      const path = `family-members/${member.family_id}/${member.user_id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("family-member-avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) {
+        setState((s) => ({ ...s, error: `写真のアップロードに失敗しました: ${uploadError.message}`, successMessage: "" }));
+        return;
+      }
+
+      const response = await fetch(`/api/family-members/${member.user_id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ avatarPath: path }),
+      });
+
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        setState((s) => ({ ...s, error: result?.error ?? "写真パスの保存に失敗しました。", successMessage: "" }));
+        return;
+      }
+
+      const { data } = await supabase.rpc("list_family_members_for_current_user");
+      const members = Array.isArray(data) ? (data as FamilyMember[]) : [];
+      setState((s) => ({ ...s, error: "", successMessage: "写真を保存しました。", members }));
+      window.dispatchEvent(new Event(FAMILY_UPDATED_EVENT));
+    } finally {
+      setUploadingUserId(null);
+    }
+  };
+
   return (
     <SectionCard
       title="家族のみんな"
@@ -304,7 +416,6 @@ export default function FamilyMembersList() {
           <div className="grid gap-3">
             {state.members.map((member) => {
               const isCurrentUser = member.user_id === currentUserId;
-              const memberInitial = member.display_label.slice(0, 1);
               const canEditMember = isCurrentUser || (canEditChildNames && member.role === "child");
               const isEditing = editingUserId === member.user_id;
 
@@ -319,9 +430,12 @@ export default function FamilyMembersList() {
                 >
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-[var(--surface-accent)] text-lg font-bold text-[var(--brand-primary-strong)]">
-                        {memberInitial}
-                      </div>
+                      <MemberAvatar
+                        avatarPath={member.avatar_path}
+                        avatarEmoji={member.avatar_emoji}
+                        displayLabel={member.display_label}
+                        size="md"
+                      />
                       <div>
                         <p className="text-base font-bold text-[var(--text-primary)] sm:text-lg">
                           {member.display_label}
@@ -367,83 +481,153 @@ export default function FamilyMembersList() {
                   </div>
 
                   {canEditMember ? (
-                    <div className="mt-4 rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.76)] px-4 py-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-sm font-bold text-[var(--text-primary)]">
-                            {member.role === "child"
-                              ? "この子の表示名"
-                              : isCurrentUser
-                                ? "あなたの表示名"
-                                : "表示名"}
-                          </p>
-                          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                            {member.role === "child"
-                              ? "ホーム画面やお小遣い一覧では、この呼び名を優先して使います。"
-                              : "家族の中で見やすい呼び名を登録できます。"}
-                          </p>
-                        </div>
-                        {!isEditing ? (
-                          <SecondaryButton
-                            type="button"
-                            size="sm"
-                            onClick={() => {
-                              setEditingUserId(member.user_id);
-                              setDraftDisplayNames((currentValue) => ({
-                                ...currentValue,
-                                [member.user_id]: member.display_name ?? "",
-                              }));
-                            }}
-                          >
-                            {member.role === "child" ? "名前を編集" : "表示名を編集"}
-                          </SecondaryButton>
-                        ) : null}
-                      </div>
-
-                      {isEditing ? (
-                        <form className="mt-4 space-y-3" onSubmit={(event) => handleSaveDisplayName(event, member)}>
-                          <label className="flex flex-col gap-2 text-sm font-bold text-[var(--text-primary)]">
-                            <span>{member.role === "child" ? "呼び名" : "表示名"}</span>
-                            <input
-                              className="min-h-12 rounded-[18px] border border-[var(--border-soft)] bg-white px-4 py-3 text-base text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--focus-ring)]"
-                              value={draftDisplayNames[member.user_id] ?? ""}
-                              onChange={(event) =>
-                                setDraftDisplayNames((currentValue) => ({
-                                  ...currentValue,
-                                  [member.user_id]: event.target.value,
-                                }))
-                              }
-                              placeholder={member.role === "child" ? "例: なぎ" : "例: ママ"}
-                            />
-                          </label>
-                          <div className="flex flex-wrap gap-2">
-                            <PrimaryButton
-                              type="submit"
-                              size="sm"
-                              fullWidth={false}
-                              disabled={state.savingUserId === member.user_id}
-                            >
-                              {state.savingUserId === member.user_id ? "保存中..." : "保存する"}
-                            </PrimaryButton>
+                    <>
+                      <div className="mt-4 rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.76)] px-4 py-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-[var(--text-primary)]">
+                              {member.role === "child"
+                                ? "この子の表示名"
+                                : isCurrentUser
+                                  ? "あなたの表示名"
+                                  : "表示名"}
+                            </p>
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                              {member.role === "child"
+                                ? "ホーム画面やお小遣い一覧では、この呼び名を優先して使います。"
+                                : "家族の中で見やすい呼び名を登録できます。"}
+                            </p>
+                          </div>
+                          {!isEditing ? (
                             <SecondaryButton
                               type="button"
                               size="sm"
-                              onClick={() => setEditingUserId(null)}
-                              disabled={state.savingUserId === member.user_id}
+                              onClick={() => {
+                                setEditingUserId(member.user_id);
+                                setDraftDisplayNames((currentValue) => ({
+                                  ...currentValue,
+                                  [member.user_id]: member.display_name ?? "",
+                                }));
+                              }}
                             >
-                              キャンセル
+                              {member.role === "child" ? "名前を編集" : "表示名を編集"}
                             </SecondaryButton>
-                          </div>
-                        </form>
-                      ) : (
-                        <p className="mt-3 text-sm text-[var(--text-secondary)]">
-                          いまの表示:{" "}
-                          <span className="font-bold text-[var(--text-primary)]">
-                            {member.display_name || "未設定"}
-                          </span>
+                          ) : null}
+                        </div>
+
+                        {isEditing ? (
+                          <form className="mt-4 space-y-3" onSubmit={(event) => handleSaveDisplayName(event, member)}>
+                            <label className="flex flex-col gap-2 text-sm font-bold text-[var(--text-primary)]">
+                              <span>{member.role === "child" ? "呼び名" : "表示名"}</span>
+                              <input
+                                className="min-h-12 rounded-[18px] border border-[var(--border-soft)] bg-white px-4 py-3 text-base text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--focus-ring)]"
+                                value={draftDisplayNames[member.user_id] ?? ""}
+                                onChange={(event) =>
+                                  setDraftDisplayNames((currentValue) => ({
+                                    ...currentValue,
+                                    [member.user_id]: event.target.value,
+                                  }))
+                                }
+                                placeholder={member.role === "child" ? "例: なぎ" : "例: ママ"}
+                              />
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              <PrimaryButton
+                                type="submit"
+                                size="sm"
+                                fullWidth={false}
+                                disabled={state.savingUserId === member.user_id}
+                              >
+                                {state.savingUserId === member.user_id ? "保存中..." : "保存する"}
+                              </PrimaryButton>
+                              <SecondaryButton
+                                type="button"
+                                size="sm"
+                                onClick={() => setEditingUserId(null)}
+                                disabled={state.savingUserId === member.user_id}
+                              >
+                                キャンセル
+                              </SecondaryButton>
+                            </div>
+                          </form>
+                        ) : (
+                          <p className="mt-3 text-sm text-[var(--text-secondary)]">
+                            いまの表示:{" "}
+                            <span className="font-bold text-[var(--text-primary)]">
+                              {member.display_name || "未設定"}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mt-4 rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.76)] px-4 py-4">
+                        <p className="text-sm font-bold text-[var(--text-primary)]">写真・アイコン</p>
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                          写真またはアイコンを設定できます。
                         </p>
-                      )}
-                    </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                          <MemberAvatar
+                            avatarPath={member.avatar_path}
+                            avatarEmoji={member.avatar_emoji}
+                            displayLabel={member.display_label}
+                            size="lg"
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <SecondaryButton
+                              type="button"
+                              size="sm"
+                              onClick={() =>
+                                setEmojiPickerUserId(
+                                  emojiPickerUserId === member.user_id ? null : member.user_id
+                                )
+                              }
+                            >
+                              アイコンを選ぶ
+                            </SecondaryButton>
+                            <SecondaryButton
+                              type="button"
+                              size="sm"
+                              disabled={uploadingUserId === member.user_id}
+                              onClick={() => fileInputRefs.current[member.user_id]?.click()}
+                            >
+                              {uploadingUserId === member.user_id ? "アップロード中..." : "写真を選ぶ"}
+                            </SecondaryButton>
+                            <input
+                              ref={(el) => { fileInputRefs.current[member.user_id] = el; }}
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void handleUploadPhoto(member, file);
+                                e.target.value = "";
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {emojiPickerUserId === member.user_id ? (
+                          <div className="mt-3">
+                            <p className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">
+                              アイコンを選んでください
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {EMOJI_OPTIONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-[var(--border-soft)] bg-white text-xl transition hover:bg-[var(--surface-accent)] disabled:opacity-50"
+                                  disabled={savingAvatarUserId === member.user_id}
+                                  onClick={() => void handleSaveEmoji(member, emoji)}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </>
                   ) : null}
                 </div>
               );

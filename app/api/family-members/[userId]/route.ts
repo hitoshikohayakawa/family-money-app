@@ -17,6 +17,32 @@ function normalizeDisplayName(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeAvatarEmoji(value: unknown): string | null {
+  if (typeof value !== "string") return undefined as unknown as null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  // Accept at most 2 characters (single emoji can be multi-codepoint)
+  return [...trimmed].slice(0, 2).join("");
+}
+
+function normalizeAvatarPath(value: unknown, supabaseUrl: string): string | null {
+  if (typeof value !== "string") return undefined as unknown as null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  // Must be a Storage object path within our bucket (not an external URL)
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    // Reject bare external URLs
+    const allowedPrefix = `${supabaseUrl}/storage/v1/object/`;
+    if (!trimmed.startsWith(allowedPrefix)) return undefined as unknown as null;
+    // Extract the path after the bucket
+    const rest = trimmed.slice(allowedPrefix.length);
+    return rest.startsWith("family-member-avatars/") ? rest.slice("family-member-avatars/".length) : null;
+  }
+  // Expect: family-members/{familyId}/{userId}/{filename}
+  if (!trimmed.startsWith("family-members/")) return null;
+  return trimmed;
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ userId: string }> }
@@ -49,6 +75,16 @@ export async function PATCH(
     typeof body === "object" && body !== null && "displayName" in body
       ? normalizeDisplayName(body.displayName)
       : "";
+
+  const avatarEmojiInput =
+    typeof body === "object" && body !== null && "avatarEmoji" in body
+      ? normalizeAvatarEmoji((body as Record<string, unknown>).avatarEmoji)
+      : undefined;
+
+  const avatarPathInput =
+    typeof body === "object" && body !== null && "avatarPath" in body
+      ? normalizeAvatarPath((body as Record<string, unknown>).avatarPath, supabaseUrl)
+      : undefined;
 
   const userClient = createClient(supabaseUrl, supabaseAnonKey, {
     global: {
@@ -149,6 +185,23 @@ export async function PATCH(
 
   if (profileError) {
     return jsonError(`表示名の保存に失敗しました: ${profileError.message}`, 500);
+  }
+
+  // Update avatar fields in family_memberships if provided
+  if (avatarEmojiInput !== undefined || avatarPathInput !== undefined) {
+    const avatarUpdate: Record<string, unknown> = {};
+    if (avatarEmojiInput !== undefined) avatarUpdate.avatar_emoji = avatarEmojiInput;
+    if (avatarPathInput !== undefined) avatarUpdate.avatar_path = avatarPathInput;
+
+    const { error: avatarError } = await adminClient
+      .from("family_memberships")
+      .update(avatarUpdate)
+      .eq("user_id", userId)
+      .eq("status", "active");
+
+    if (avatarError) {
+      return jsonError(`アバターの保存に失敗しました: ${avatarError.message}`, 500);
+    }
   }
 
   return NextResponse.json({

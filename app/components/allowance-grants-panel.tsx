@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import useElementaryMode from "@/app/components/use-elementary-mode";
+import MemberAvatar from "@/app/components/ui/member-avatar";
 import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
@@ -28,6 +29,8 @@ type FamilyMember = {
   email: string | null;
   display_name: string | null;
   display_label: string;
+  avatar_path: string | null;
+  avatar_emoji: string | null;
 };
 
 type AllowanceGrant = {
@@ -1752,7 +1755,7 @@ export default function AllowanceGrantsPanel({
                               <button
                                 key={member.user_id}
                                 type="button"
-                                className={`rounded-full px-4 py-2.5 text-sm font-bold transition ${
+                                className={`flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-sm font-bold transition ${
                                   isSelected
                                     ? "bg-[var(--brand-primary)] text-white shadow-[0_10px_24px_rgba(51,101,63,0.2)]"
                                     : "border border-[var(--border-soft)] bg-white text-[var(--text-primary)]"
@@ -1762,6 +1765,13 @@ export default function AllowanceGrantsPanel({
                                   setActivePage(1);
                                 }}
                               >
+                                <MemberAvatar
+                                  avatarPath={member.avatar_path}
+                                  avatarEmoji={member.avatar_emoji}
+                                  displayLabel={member.display_label}
+                                  size="sm"
+                                  className={isSelected ? "opacity-90" : ""}
+                                />
                                 {member.display_label}
                               </button>
                             );
