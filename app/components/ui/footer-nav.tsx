@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 type NavItem = {
   href: string;
@@ -41,6 +43,22 @@ function FamilyIcon({ active }: { active: boolean }) {
 
 export default function FooterNav() {
   const pathname = usePathname();
+  const [isChild, setIsChild] = useState(false);
+
+  useEffect(() => {
+    async function checkRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("family_memberships")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+      setIsChild(data?.role === "child");
+    }
+    void checkRole();
+  }, []);
 
   const isActive = (href: string, matchPrefix?: boolean) => {
     if (matchPrefix) return pathname === href || pathname.startsWith(href + "/");
@@ -50,7 +68,7 @@ export default function FooterNav() {
   const navItems: NavItem[] = [
     { href: "/", label: "ホーム", icon: null },
     { href: "/allowance", label: "お小遣い", icon: null },
-    { href: "/family", label: "家族設定", icon: null, matchPrefix: true },
+    ...(!isChild ? [{ href: "/family", label: "家族設定", icon: null, matchPrefix: true } as NavItem] : []),
   ];
 
   return (

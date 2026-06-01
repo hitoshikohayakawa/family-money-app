@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSafeSession } from "@/lib/client-auth";
@@ -149,7 +150,15 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 // ─── Member card ─────────────────────────────────────────────────────────────
 
-function MemberCard({ member, isSelf }: { member: FamilyMember; isSelf: boolean }) {
+function MemberCard({
+  member,
+  isSelf,
+  navigable = true,
+}: {
+  member: FamilyMember;
+  isSelf: boolean;
+  navigable?: boolean;
+}) {
   const isChild = member.role === "child";
   const roleLabel = formatFamilyRoleShort(member.role);
   const roleTone = familyRoleShortTone(member.role);
@@ -167,13 +176,13 @@ function MemberCard({ member, isSelf }: { member: FamilyMember; isSelf: boolean 
       </p>
       <StatusBadge tone={roleTone}>{roleLabel}</StatusBadge>
       {isSelf ? <StatusBadge tone="success">あなた</StatusBadge> : null}
-      {isChild ? (
+      {isChild && navigable ? (
         <p className="text-[10px] font-semibold text-[var(--brand-primary)]">お小遣いを見る</p>
       ) : null}
     </div>
   );
 
-  if (isChild) {
+  if (isChild && navigable) {
     return (
       <Link
         href={`/allowance?childId=${member.user_id}`}
@@ -509,52 +518,61 @@ export default function HomeDashboard() {
         <div className="flex flex-col gap-5">
 
           {/* 1. Hero */}
-          <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,rgba(230,245,233,0.98),rgba(255,250,230,0.95))] p-6">
-            <span className="pointer-events-none absolute right-5 top-5 select-none text-5xl opacity-20">
-              🏡
-            </span>
-            <p className="text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-3xl">
-              おかえりなさい、
-              <br />
-              {greetingName}さん！
-            </p>
-            <p className="mt-2 max-w-xs text-sm leading-6 text-[var(--text-secondary)]">
-              家族みんなでお金のことを楽しく学びましょう
-            </p>
+          <section className="relative min-h-[120px] overflow-hidden rounded-[28px] p-6">
+            <Image
+              src="/famimane_head.png"
+              alt=""
+              fill
+              className="object-cover object-right-bottom"
+              priority
+            />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(236,248,238,0.80)_45%,transparent_78%)]" />
+            <div className="relative z-10">
+              <p className="text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-3xl">
+                おかえりなさい、
+                <br />
+                {greetingName}さん！
+              </p>
+              <p className="mt-2 max-w-xs text-sm leading-6 text-[var(--text-secondary)]">
+                家族みんなでお金のことを楽しく学びましょう
+              </p>
+            </div>
           </section>
 
-          {/* 2. Family card */}
-          <Card>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <SectionTitle>自分のファミリー</SectionTitle>
-              <div className="flex flex-wrap items-center gap-2">
-                {state.familyName ? (
-                  <span className="rounded-full bg-[var(--surface-accent)] px-3 py-1 text-xs font-bold text-[var(--brand-primary-strong)]">
-                    {state.familyName}
+          {/* 2. Family card — guardian only (child sees it at the bottom) */}
+          {isGuardian ? (
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <SectionTitle>自分のファミリー</SectionTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  {state.familyName ? (
+                    <span className="rounded-full bg-[var(--surface-accent)] px-3 py-1 text-xs font-bold text-[var(--brand-primary-strong)]">
+                      {state.familyName}
+                    </span>
+                  ) : null}
+                  <span className="rounded-full border border-[var(--border-soft)] bg-white px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                    {state.members.length}人のメンバー
                   </span>
-                ) : null}
-                <span className="rounded-full border border-[var(--border-soft)] bg-white px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                  {state.members.length}人のメンバー
-                </span>
-              </div>
-            </div>
-
-            {state.members.length === 0 ? (
-              <p className="mt-4 text-sm text-[var(--text-secondary)]">メンバーが見つかりません</p>
-            ) : (
-              <div className="-mx-1 mt-5 overflow-x-auto pb-1">
-                <div className="flex min-w-max gap-3 px-1">
-                  {state.members.map((member) => (
-                    <MemberCard
-                      key={member.user_id}
-                      member={member}
-                      isSelf={member.user_id === state.userId}
-                    />
-                  ))}
                 </div>
               </div>
-            )}
-          </Card>
+
+              {state.members.length === 0 ? (
+                <p className="mt-4 text-sm text-[var(--text-secondary)]">メンバーが見つかりません</p>
+              ) : (
+                <div className="-mx-1 mt-5 overflow-x-auto pb-1">
+                  <div className="flex min-w-max gap-3 px-1">
+                    {state.members.map((member) => (
+                      <MemberCard
+                        key={member.user_id}
+                        member={member}
+                        isSelf={member.user_id === state.userId}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          ) : null}
 
           {/* 3. Allowance summary */}
           <Card>
@@ -652,26 +670,111 @@ export default function HomeDashboard() {
             )}
           </Card>
 
-          {/* 5. Quick menu */}
-          <Card>
-            <SectionTitle>クイックメニュー</SectionTitle>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {quickMenuItems.map(({ href, label, icon, iconBg, iconColor }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="flex flex-col items-center gap-3 rounded-[22px] border border-[var(--border-soft)] bg-white p-5 text-center transition hover:bg-[var(--surface-accent)]"
-                >
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-full ${iconBg} ${iconColor}`}
+          {/* 5a. Quick menu — guardian only */}
+          {isGuardian ? (
+            <Card>
+              <SectionTitle>クイックメニュー</SectionTitle>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {quickMenuItems.map(({ href, label, icon, iconBg, iconColor }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex flex-col items-center gap-3 rounded-[22px] border border-[var(--border-soft)] bg-white p-5 text-center transition hover:bg-[var(--surface-accent)]"
                   >
-                    {icon}
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-full ${iconBg} ${iconColor}`}
+                    >
+                      {icon}
+                    </div>
+                    <p className="text-sm font-bold text-[var(--text-primary)]">{label}</p>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+
+          {/* 5b. Learning sites — child only */}
+          {isChild ? (
+            <Card>
+              <SectionTitle>お金を学ぶサイト</SectionTitle>
+              <div className="mt-4 grid gap-3">
+                {[
+                  {
+                    href: "https://finance.yahoo.co.jp/",
+                    name: "Yahoo!ファイナンス",
+                    description: "株や投資信託の最新価格、為替レート、マーケットニュースを無料で確認できます。",
+                    iconBg: "bg-[rgba(76,163,104,0.12)]",
+                    iconColor: "text-[var(--brand-primary)]",
+                  },
+                  {
+                    href: "https://media.rakuten-sec.net/",
+                    name: "トウシル（楽天証券）",
+                    description: "楽天証券の投資情報サイト。初心者向けのわかりやすい記事やコラムが豊富です。",
+                    iconBg: "bg-[rgba(228,163,94,0.12)]",
+                    iconColor: "text-[var(--warning)]",
+                  },
+                ].map(({ href, name, description, iconBg, iconColor }) => (
+                  <a
+                    key={href}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-[20px] border border-[var(--border-soft)] bg-white px-4 py-3 transition hover:bg-[var(--surface-accent)]"
+                  >
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconBg} ${iconColor}`}>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-[var(--text-primary)]">{name}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)]">{description}</p>
+                    </div>
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+
+          {/* 5c. Family card — child only, at bottom, non-navigable */}
+          {isChild ? (
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <SectionTitle>自分のファミリー</SectionTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  {state.familyName ? (
+                    <span className="rounded-full bg-[var(--surface-accent)] px-3 py-1 text-xs font-bold text-[var(--brand-primary-strong)]">
+                      {state.familyName}
+                    </span>
+                  ) : null}
+                  <span className="rounded-full border border-[var(--border-soft)] bg-white px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+                    {state.members.length}人のメンバー
+                  </span>
+                </div>
+              </div>
+              {state.members.length === 0 ? (
+                <p className="mt-4 text-sm text-[var(--text-secondary)]">メンバーが見つかりません</p>
+              ) : (
+                <div className="-mx-1 mt-5 overflow-x-auto pb-1">
+                  <div className="flex min-w-max gap-3 px-1">
+                    {state.members.map((member) => (
+                      <MemberCard
+                        key={member.user_id}
+                        member={member}
+                        isSelf={member.user_id === state.userId}
+                        navigable={false}
+                      />
+                    ))}
                   </div>
-                  <p className="text-sm font-bold text-[var(--text-primary)]">{label}</p>
-                </Link>
-              ))}
-            </div>
-          </Card>
+                </div>
+              )}
+            </Card>
+          ) : null}
 
         </div>
       </main>

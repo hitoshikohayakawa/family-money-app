@@ -1,4 +1,5 @@
 import AppHeader from "@/app/components/app-header";
+import FamilyChildGuard from "@/app/components/family-child-guard";
 import FamilyMembersList from "@/app/components/family-members-list";
 import FamilySetup from "@/app/components/family-setup";
 import FooterNav from "@/app/components/ui/footer-nav";
@@ -7,6 +8,7 @@ import PageContainer from "@/app/components/ui/page-container";
 export default function FamilyPage() {
   return (
     <>
+      <FamilyChildGuard />
       <AppHeader />
       <PageContainer
         title="家族設定"
