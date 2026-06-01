@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useElementaryMode from "@/app/components/use-elementary-mode";
 import MemberAvatar from "@/app/components/ui/member-avatar";
 import { getSafeSession } from "@/lib/client-auth";
@@ -799,6 +799,8 @@ export default function AllowanceGrantsPanel({
   const { elementaryMode } = useElementaryMode();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const childIdFromUrl = searchParams?.get("childId") ?? "";
   const [selectedChildId, setSelectedChildId] = useState("");
   const [amountJpy, setAmountJpy] = useState("");
   const [grantDate, setGrantDate] = useState(todayDateValue);
@@ -1012,11 +1014,16 @@ export default function AllowanceGrantsPanel({
 
       const childMembers = membersResult.data.filter((member) => member.role === "child");
       const firstChildId = childMembers[0]?.user_id ?? "";
+      // Prefer URL childId if valid, otherwise keep current selection or fall back to first child
+      const preferredChildId =
+        childIdFromUrl && childMembers.some((m) => m.user_id === childIdFromUrl)
+          ? childIdFromUrl
+          : firstChildId;
 
       setSelectedChildId((currentValue) =>
         childMembers.some((member) => member.user_id === currentValue)
           ? currentValue
-          : firstChildId
+          : preferredChildId
       );
       setState((currentState) => ({
         ...currentState,
@@ -1051,7 +1058,20 @@ export default function AllowanceGrantsPanel({
       subscription.unsubscribe();
       window.removeEventListener(FAMILY_UPDATED_EVENT, handleFamilyUpdated);
     };
+    // Initial data loading should run once on mount.
+    // childIdFromUrl synchronization is handled by the dedicated effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync URL childId → selectedChildId when URL changes (SPA navigation)
+  useEffect(() => {
+    if (!childIdFromUrl || state.members.length === 0) return;
+    const childMembers = state.members.filter((m) => m.role === "child");
+    if (childMembers.some((m) => m.user_id === childIdFromUrl)) {
+      setSelectedChildId(childIdFromUrl);
+      setActivePage(1);
+    }
+  }, [childIdFromUrl, state.members]);
 
   useEffect(() => {
     if (state.loading || state.isAuthenticated) {

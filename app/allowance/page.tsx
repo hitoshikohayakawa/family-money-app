@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import AppHeader from "@/app/components/app-header";
 import AllowanceGrantsPanel from "@/app/components/allowance-grants-panel";
 import FooterNav from "@/app/components/ui/footer-nav";
@@ -13,7 +14,10 @@ export default function AllowancePage() {
     <>
       <AppHeader />
       <PageContainer>
-        <AllowanceGrantsPanel />
+        {/* Suspense required because AllowanceGrantsPanel uses useSearchParams */}
+        <Suspense>
+          <AllowanceGrantsPanel />
+        </Suspense>
         {/* Spacer for fixed FooterNav */}
         <div className="h-16" />
       </PageContainer>

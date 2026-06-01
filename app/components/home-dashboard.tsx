@@ -46,8 +46,6 @@ type HomeState = {
   role: string | null;
   familyId: string | null;
   familyName: string | null;
-  ownAvatarPath: string | null;
-  ownAvatarEmoji: string | null;
   members: FamilyMember[];
   grants: GrantRow[];
 };
@@ -60,6 +58,77 @@ function formatCurrency(amount: number) {
     currency: "JPY",
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+// ─── SVG Icons ───────────────────────────────────────────────────────────────
+
+function IconWallet() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20" />
+      <circle cx="16" cy="15" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function IconSettings() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+    </svg>
+  );
+}
+
+function IconPersonAdd() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="8.5" cy="7" r="4" />
+      <line x1="20" y1="8" x2="20" y2="14" />
+      <line x1="17" y1="11" x2="23" y2="11" />
+    </svg>
+  );
+}
+
+function IconCash() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  );
+}
+
+function IconDocument() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+
+function IconCamera() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+
+function IconPeople() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  );
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -78,6 +147,46 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="text-lg font-extrabold text-[var(--text-primary)]">{children}</p>;
 }
 
+// ─── Member card ─────────────────────────────────────────────────────────────
+
+function MemberCard({ member, isSelf }: { member: FamilyMember; isSelf: boolean }) {
+  const isChild = member.role === "child";
+  const roleLabel = formatFamilyRoleShort(member.role);
+  const roleTone = familyRoleShortTone(member.role);
+
+  const inner = (
+    <div className="flex w-20 flex-col items-center gap-1.5 text-center">
+      <MemberAvatar
+        avatarPath={member.avatar_path}
+        avatarEmoji={member.avatar_emoji}
+        displayLabel={member.display_label}
+        size="lg"
+      />
+      <p className="w-full truncate text-xs font-bold text-[var(--text-primary)]">
+        {member.display_label}
+      </p>
+      <StatusBadge tone={roleTone}>{roleLabel}</StatusBadge>
+      {isSelf ? <StatusBadge tone="success">あなた</StatusBadge> : null}
+      {isChild ? (
+        <p className="text-[10px] font-semibold text-[var(--brand-primary)]">お小遣いを見る</p>
+      ) : null}
+    </div>
+  );
+
+  if (isChild) {
+    return (
+      <Link
+        href={`/allowance?childId=${member.user_id}`}
+        className="rounded-[18px] p-1 transition hover:bg-[var(--surface-accent)]"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return <div className="p-1">{inner}</div>;
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function HomeDashboard() {
@@ -90,8 +199,6 @@ export default function HomeDashboard() {
     role: null,
     familyId: null,
     familyName: null,
-    ownAvatarPath: null,
-    ownAvatarEmoji: null,
     members: [],
     grants: [],
   });
@@ -123,7 +230,7 @@ export default function HomeDashboard() {
       ] = await Promise.all([
         supabase
           .from("family_memberships")
-          .select("family_id, role, avatar_path, avatar_emoji")
+          .select("family_id, role")
           .eq("user_id", userId)
           .eq("status", "active")
           .maybeSingle(),
@@ -162,8 +269,6 @@ export default function HomeDashboard() {
         role: typeof membership?.role === "string" ? membership.role : null,
         familyId,
         familyName,
-        ownAvatarPath: membership?.avatar_path ?? null,
-        ownAvatarEmoji: membership?.avatar_emoji ?? null,
         members: Array.isArray(membersRaw) ? (membersRaw as FamilyMember[]) : [],
         grants: Array.isArray(grantsRaw) ? (grantsRaw as GrantRow[]) : [],
       });
@@ -193,7 +298,7 @@ export default function HomeDashboard() {
   const isChild = state.role === "child";
   const greetingName = state.displayName ?? state.email ?? "さん";
 
-  // Summary — activeGrants excludes both "requested" and "paid" (matches panel logic)
+  // Summary — mirrors AllowanceGrantsPanel: activeGrants excludes cashout_status !== null
   const activeGrants = state.grants.filter((g) => !g.cashout_status);
   const paidGrants = state.grants.filter((g) => g.cashout_status === "paid");
 
@@ -240,7 +345,9 @@ export default function HomeDashboard() {
 
   type NotifItem = {
     key: string;
-    icon: string;
+    icon: React.ReactNode;
+    iconBg: string;
+    iconColor: string;
     title: string;
     description: string;
     href: string;
@@ -251,7 +358,9 @@ export default function HomeDashboard() {
   if (pendingCashoutsForGuardian.length > 0) {
     notifications.push({
       key: "cashout",
-      icon: "💰",
+      icon: <IconCash />,
+      iconBg: "bg-[rgba(191,110,82,0.12)]",
+      iconColor: "text-[var(--danger)]",
       title: "支払い申請が届いています",
       description: `${pendingCashoutsForGuardian.length}件の申請があります`,
       href: "/allowance",
@@ -260,7 +369,9 @@ export default function HomeDashboard() {
   if (pendingDecisionsForGuardian.length > 0) {
     notifications.push({
       key: "pending-guardian",
-      icon: "📝",
+      icon: <IconDocument />,
+      iconBg: "bg-[rgba(228,163,94,0.12)]",
+      iconColor: "text-[var(--warning)]",
       title: "まだ決めていないお小遣いがあります",
       description: `${pendingDecisionsForGuardian.length}件が未決定です`,
       href: "/allowance",
@@ -269,7 +380,9 @@ export default function HomeDashboard() {
   if (pendingDecisionsForChild.length > 0) {
     notifications.push({
       key: "pending-child",
-      icon: "📝",
+      icon: <IconDocument />,
+      iconBg: "bg-[rgba(228,163,94,0.12)]",
+      iconColor: "text-[var(--warning)]",
       title: "まだ決めていないお小遣いがあります",
       description: `${pendingDecisionsForChild.length}件が未決定です`,
       href: "/allowance",
@@ -278,7 +391,9 @@ export default function HomeDashboard() {
   if (profileNotSet) {
     notifications.push({
       key: "profile",
-      icon: "📷",
+      icon: <IconCamera />,
+      iconBg: "bg-[var(--surface-accent)]",
+      iconColor: "text-[var(--brand-primary)]",
       title: "写真やアイコンを設定しましょう",
       description: "アイコンや名前を設定すると、もっと使いやすくなります",
       href: "/family",
@@ -287,20 +402,48 @@ export default function HomeDashboard() {
   if (isGuardian && state.members.length < 3) {
     notifications.push({
       key: "invite",
-      icon: "👨‍👩‍👧",
+      icon: <IconPeople />,
+      iconBg: "bg-[rgba(76,163,104,0.12)]",
+      iconColor: "text-[var(--success)]",
       title: "家族を招待できます",
       description: "家族メンバーを増やして、より便利に使えます",
       href: "/family/invites",
     });
   }
 
-  // Quick menu
-  const quickMenuItems = [
-    { href: "/allowance", label: "お小遣いを見る", icon: "💰" },
+  // Quick menu items with SVG icons
+  type QuickItem = {
+    href: string;
+    label: string;
+    icon: React.ReactNode;
+    iconBg: string;
+    iconColor: string;
+  };
+
+  const quickMenuItems: QuickItem[] = [
+    {
+      href: "/allowance",
+      label: "お小遣いを見る",
+      icon: <IconWallet />,
+      iconBg: "bg-[rgba(76,163,104,0.12)]",
+      iconColor: "text-[var(--brand-primary)]",
+    },
     ...(isGuardian
       ? [
-          { href: "/family", label: "家族設定", icon: "⚙️" },
-          { href: "/family/invites", label: "家族を招待", icon: "✉️" },
+          {
+            href: "/family",
+            label: "家族設定",
+            icon: <IconSettings />,
+            iconBg: "bg-[var(--surface-accent)]",
+            iconColor: "text-[var(--info)]",
+          },
+          {
+            href: "/family/invites",
+            label: "家族を招待",
+            icon: <IconPersonAdd />,
+            iconBg: "bg-[rgba(228,163,94,0.12)]",
+            iconColor: "text-[var(--warning)]",
+          },
         ]
       : []),
   ];
@@ -367,9 +510,12 @@ export default function HomeDashboard() {
 
           {/* 1. Hero */}
           <section className="relative overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,rgba(230,245,233,0.98),rgba(255,250,230,0.95))] p-6">
-            <span className="pointer-events-none absolute right-5 top-5 text-5xl opacity-30 select-none">🏡</span>
+            <span className="pointer-events-none absolute right-5 top-5 select-none text-5xl opacity-20">
+              🏡
+            </span>
             <p className="text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-3xl">
-              おかえりなさい、<br />
+              おかえりなさい、
+              <br />
               {greetingName}さん！
             </p>
             <p className="mt-2 max-w-xs text-sm leading-6 text-[var(--text-secondary)]">
@@ -397,32 +543,14 @@ export default function HomeDashboard() {
               <p className="mt-4 text-sm text-[var(--text-secondary)]">メンバーが見つかりません</p>
             ) : (
               <div className="-mx-1 mt-5 overflow-x-auto pb-1">
-                <div className="flex min-w-max gap-4 px-1">
-                  {state.members.map((member) => {
-                    const isSelf = member.user_id === state.userId;
-                    return (
-                      <div
-                        key={member.user_id}
-                        className="flex w-20 flex-col items-center gap-1.5 text-center"
-                      >
-                        <MemberAvatar
-                          avatarPath={member.avatar_path}
-                          avatarEmoji={member.avatar_emoji}
-                          displayLabel={member.display_label}
-                          size="lg"
-                        />
-                        <p className="w-full truncate text-xs font-bold text-[var(--text-primary)]">
-                          {member.display_label}
-                        </p>
-                        <StatusBadge tone={familyRoleShortTone(member.role)}>
-                          {formatFamilyRoleShort(member.role)}
-                        </StatusBadge>
-                        {isSelf ? (
-                          <StatusBadge tone="success">あなた</StatusBadge>
-                        ) : null}
-                      </div>
-                    );
-                  })}
+                <div className="flex min-w-max gap-3 px-1">
+                  {state.members.map((member) => (
+                    <MemberCard
+                      key={member.user_id}
+                      member={member}
+                      isSelf={member.user_id === state.userId}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -443,7 +571,7 @@ export default function HomeDashboard() {
             </div>
 
             <div className="mt-4">
-              <p className="text-xs font-semibold text-[var(--text-secondary)]">総資産</p>
+              <p className="text-xs font-semibold text-[var(--text-secondary)]">現在の総資産</p>
               <p className="mt-1 text-4xl font-black text-[var(--text-primary)]">
                 {formatCurrency(totalAssets)}
               </p>
@@ -463,7 +591,7 @@ export default function HomeDashboard() {
               {[
                 { label: "お小遣い総額", value: totalAllowance },
                 { label: "投資中", value: totalInvested },
-                { label: "支払い済み", value: totalPaid },
+                { label: "これまで支払い済み", value: totalPaid },
               ].map(({ label, value }) => (
                 <div
                   key={label}
@@ -486,7 +614,11 @@ export default function HomeDashboard() {
 
             {notifications.length === 0 ? (
               <div className="mt-5 flex flex-col items-center gap-2 py-4 text-center">
-                <span className="text-3xl">✅</span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(76,163,104,0.12)]">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-[var(--success)]" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
                 <p className="text-sm font-bold text-[var(--text-primary)]">
                   いま対応が必要なことはありません
                 </p>
@@ -502,12 +634,18 @@ export default function HomeDashboard() {
                     href={n.href}
                     className="flex items-center gap-3 rounded-[20px] border border-[var(--border-soft)] bg-white px-4 py-3 transition hover:bg-[var(--surface-accent)]"
                   >
-                    <span className="text-xl">{n.icon}</span>
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${n.iconBg} ${n.iconColor}`}
+                    >
+                      {n.icon}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-[var(--text-primary)]">{n.title}</p>
                       <p className="text-xs text-[var(--text-secondary)]">{n.description}</p>
                     </div>
-                    <span className="shrink-0 text-lg text-[var(--text-muted)]">›</span>
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
                   </Link>
                 ))}
               </div>
@@ -518,13 +656,17 @@ export default function HomeDashboard() {
           <Card>
             <SectionTitle>クイックメニュー</SectionTitle>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {quickMenuItems.map(({ href, label, icon }) => (
+              {quickMenuItems.map(({ href, label, icon, iconBg, iconColor }) => (
                 <Link
                   key={href}
                   href={href}
-                  className="flex flex-col items-center gap-2 rounded-[22px] border border-[var(--border-soft)] bg-white p-5 text-center transition hover:bg-[var(--surface-accent)]"
+                  className="flex flex-col items-center gap-3 rounded-[22px] border border-[var(--border-soft)] bg-white p-5 text-center transition hover:bg-[var(--surface-accent)]"
                 >
-                  <span className="text-3xl">{icon}</span>
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-full ${iconBg} ${iconColor}`}
+                  >
+                    {icon}
+                  </div>
                   <p className="text-sm font-bold text-[var(--text-primary)]">{label}</p>
                 </Link>
               ))}
