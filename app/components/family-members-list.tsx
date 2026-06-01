@@ -13,9 +13,12 @@ import StatusBadge from "@/app/components/ui/status-badge";
 import { familyRoleTone, formatFamilyRole } from "@/app/components/ui/family-labels";
 
 const EMOJI_OPTIONS = [
-  "🐶","🐱","🐰","🐻","🦁","🐼","🐨","🐯","🦊","🐸",
-  "🐧","🐦","🦋","🌸","⭐","🌈","🚀","🎀","🎸","⚽",
-  "🍎","🍓","🍕","🎂","🌻","🌙","❤️","💚","💙","✨",
+  // 人物・顔（メイン）
+  "👦","👧","🧒","👶","👨","👩","🧑","👴","👵","🧓",
+  // 表情
+  "😊","😄","🥰","😎","😇","🤗","😋","🙂","😆","🥳",
+  // 動物（少数）＋アクセサリー
+  "🐶","🐱","🐰","🐻","🦁","⭐","🌟","🌈","🎀","👑",
 ];
 
 type FamilyMember = {
