@@ -554,6 +554,15 @@ export default function AppHeader() {
                       アカウント設定
                     </Link>
                   ) : null}
+                  <a
+                    href="https://forms.gle/NC7prDQbAzzZe7N3A"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-[18px] px-4 py-3 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-accent)]"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    お問い合わせ
+                  </a>
                 </nav>
 
                 {isChild ? (
