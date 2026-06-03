@@ -127,13 +127,13 @@ export default function AppHeader() {
         ? await Promise.all([
             supabase
               .from("family_memberships")
-              .select("role")
+              .select("role, avatar_path, avatar_emoji")
               .eq("status", "active")
               .eq("user_id", session.user.id)
               .maybeSingle(),
             supabase
               .from("profiles")
-              .select("display_name, avatar_path, avatar_emoji")
+              .select("display_name")
               .eq("id", session.user.id)
               .maybeSingle(),
             supabase.rpc("list_allowance_grants_for_current_user"),
@@ -153,7 +153,7 @@ export default function AppHeader() {
             ? profile.display_name
             : null,
         role: typeof membership?.role === "string" ? membership.role : null,
-        hasAvatar: !!(profile?.avatar_path || profile?.avatar_emoji),
+        hasAvatar: !!(membership?.avatar_path || membership?.avatar_emoji),
         grants: Array.isArray(grantsRaw) ? (grantsRaw as HeaderGrantRow[]) : [],
         loading: false,
       }));
