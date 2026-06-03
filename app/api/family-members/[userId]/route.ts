@@ -43,6 +43,78 @@ function normalizeAvatarPath(value: unknown, supabaseUrl: string): string | null
   return trimmed;
 }
 
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ userId: string }> }
+) {
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+    return jsonError("Supabase のサーバー環境変数が不足しています。", 500);
+  }
+
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) {
+    return jsonError("ログイン状態を確認できませんでした。", 401);
+  }
+
+  const { userId } = await context.params;
+  if (!userId) {
+    return jsonError("対象ユーザーが指定されていません。");
+  }
+
+  const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authorization } },
+  });
+  const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const {
+    data: { user },
+    error: userError,
+  } = await userClient.auth.getUser();
+  if (userError || !user) {
+    return jsonError("ログイン状態を確認できませんでした。", 401);
+  }
+
+  if (user.id === userId) {
+    return jsonError("自分自身は削除できません。", 403);
+  }
+
+  const { data: requesterMembership } = await adminClient
+    .from("family_memberships")
+    .select("family_id, role")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!requesterMembership || requesterMembership.role !== "guardian_admin") {
+    return jsonError("家族管理者のみメンバーを削除できます。", 403);
+  }
+
+  const { data: targetMembership } = await adminClient
+    .from("family_memberships")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("family_id", requesterMembership.family_id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!targetMembership) {
+    return jsonError("同じ家族のメンバーが見つかりませんでした。", 404);
+  }
+
+  const { error: deleteError } = await adminClient
+    .from("family_memberships")
+    .update({ status: "inactive" })
+    .eq("id", targetMembership.id);
+
+  if (deleteError) {
+    return jsonError(`削除に失敗しました: ${deleteError.message}`, 500);
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ userId: string }> }

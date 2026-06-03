@@ -13,11 +13,8 @@ import StatusBadge from "@/app/components/ui/status-badge";
 import { familyRoleTone, formatFamilyRole } from "@/app/components/ui/family-labels";
 
 const EMOJI_OPTIONS = [
-  // 役職・衣装つきキャラ（見た目が明確に違う）
   "👸","🤴","👼","🎅","🤶","🧙","🦸","🦹","💂","👮",
-  // 表情
   "😊","😄","🥰","😎","😇","🤗","😋","🥳","🤩","😆",
-  // 動物（少数）＋アクセサリー
   "🐶","🐱","🐰","🐻","🦁","⭐","🌟","🌈","🎀","👑",
 ];
 
@@ -43,11 +40,15 @@ type FamilyMembersState = {
 export default function FamilyMembersList() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingNameMember, setEditingNameMember] = useState<FamilyMember | null>(null);
   const [draftDisplayNames, setDraftDisplayNames] = useState<Record<string, string>>({});
   const [emojiPickerUserId, setEmojiPickerUserId] = useState<string | null>(null);
   const [savingAvatarUserId, setSavingAvatarUserId] = useState<string | null>(null);
   const [uploadingUserId, setUploadingUserId] = useState<string | null>(null);
+  const [menuOpenUserId, setMenuOpenUserId] = useState<string | null>(null);
+  const [deleteConfirmMember, setDeleteConfirmMember] = useState<FamilyMember | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [state, setState] = useState<FamilyMembersState>({
     loading: true,
@@ -66,33 +67,19 @@ export default function FamilyMembersList() {
         error: sessionError,
       } = await getSafeSession(supabase);
 
-      if (!isActive) {
-        return;
-      }
+      if (!isActive) return;
 
       if (sessionError) {
         setCurrentUserId(null);
         setCurrentUserRole(null);
-        setState({
-          loading: false,
-          savingUserId: null,
-          error: "ログイン状態の確認に失敗しました。",
-          successMessage: "",
-          members: [],
-        });
+        setState({ loading: false, savingUserId: null, error: "ログイン状態の確認に失敗しました。", successMessage: "", members: [] });
         return;
       }
 
       if (!session?.user) {
         setCurrentUserId(null);
         setCurrentUserRole(null);
-        setState({
-          loading: false,
-          savingUserId: null,
-          error: "",
-          successMessage: "",
-          members: [],
-        });
+        setState({ loading: false, savingUserId: null, error: "", successMessage: "", members: [] });
         return;
       }
 
@@ -105,64 +92,37 @@ export default function FamilyMembersList() {
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      if (!isActive) {
-        return;
-      }
+      if (!isActive) return;
 
       setCurrentUserRole(typeof membership?.role === "string" ? membership.role : null);
 
-      const { data, error } = await supabase.rpc(
-        "list_family_members_for_current_user"
-      );
+      const { data, error } = await supabase.rpc("list_family_members_for_current_user");
 
-      if (!isActive) {
-        return;
-      }
+      if (!isActive) return;
 
       if (error) {
-        setState({
-          loading: false,
-          savingUserId: null,
-          error: `家族メンバー一覧の取得に失敗しました: ${error.message}`,
-          successMessage: "",
-          members: [],
-        });
+        setState({ loading: false, savingUserId: null, error: `家族メンバー一覧の取得に失敗しました: ${error.message}`, successMessage: "", members: [] });
         return;
       }
 
       const members = Array.isArray(data) ? (data as FamilyMember[]) : [];
 
-      setDraftDisplayNames((currentValue) => {
-        const nextValue = { ...currentValue };
-
+      setDraftDisplayNames((current) => {
+        const next = { ...current };
         for (const member of members) {
-          nextValue[member.user_id] = member.display_name ?? "";
+          next[member.user_id] = member.display_name ?? "";
         }
-
-        return nextValue;
+        return next;
       });
 
-      setState({
-        loading: false,
-        savingUserId: null,
-        error: "",
-        successMessage: "",
-        members,
-      });
+      setState({ loading: false, savingUserId: null, error: "", successMessage: "", members });
     };
 
     void loadMembers();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      void loadMembers();
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => void loadMembers());
 
-    const handleFamilyUpdated = () => {
-      void loadMembers();
-    };
-
+    const handleFamilyUpdated = () => void loadMembers();
     window.addEventListener(FAMILY_UPDATED_EVENT, handleFamilyUpdated);
 
     return () => {
@@ -172,128 +132,84 @@ export default function FamilyMembersList() {
     };
   }, []);
 
-  const guardianAdminCount = state.members.filter(
-    (member) => member.role === "guardian_admin"
-  ).length;
-  const guardianCount = state.members.filter(
-    (member) => member.role === "guardian"
-  ).length;
-  const childCount = state.members.filter((member) => member.role === "child").length;
-  const canEditChildNames =
-    currentUserRole === "guardian_admin" || currentUserRole === "guardian";
+  // Close ... menu on outside click
+  useEffect(() => {
+    if (!menuOpenUserId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenUserId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpenUserId]);
 
-  const handleSaveDisplayName = async (
-    event: FormEvent<HTMLFormElement>,
-    member: FamilyMember
-  ) => {
+  const guardianAdminCount = state.members.filter((m) => m.role === "guardian_admin").length;
+  const guardianCount = state.members.filter((m) => m.role === "guardian").length;
+  const childCount = state.members.filter((m) => m.role === "child").length;
+  const canEditChildNames = currentUserRole === "guardian_admin" || currentUserRole === "guardian";
+
+  const getToken = async () => {
+    const { data: { session }, error } = await getSafeSession(supabase);
+    if (error || !session?.access_token) return null;
+    return session.access_token;
+  };
+
+  const handleSaveDisplayName = async (event: FormEvent<HTMLFormElement>, member: FamilyMember) => {
     event.preventDefault();
-
-    const draftDisplayName = draftDisplayNames[member.user_id] ?? "";
-    const {
-      data: { session },
-      error: sessionError,
-    } = await getSafeSession(supabase);
-
-    if (sessionError || !session?.access_token) {
-      setState((currentState) => ({
-        ...currentState,
-        error: "ログイン状態の確認に失敗しました。",
-        successMessage: "",
-      }));
+    const draftName = draftDisplayNames[member.user_id] ?? "";
+    const token = await getToken();
+    if (!token) {
+      setState((s) => ({ ...s, error: "ログイン状態の確認に失敗しました。", successMessage: "" }));
       return;
     }
 
-    setState((currentState) => ({
-      ...currentState,
-      savingUserId: member.user_id,
-      error: "",
-      successMessage: "",
-    }));
-
-    let response: Response;
+    setState((s) => ({ ...s, savingUserId: member.user_id, error: "", successMessage: "" }));
 
     try {
-      response = await fetch(`/api/family-members/${member.user_id}`, {
+      const response = await fetch(`/api/family-members/${member.user_id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          displayName: draftDisplayName,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ displayName: draftName }),
       });
+
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        setState((s) => ({ ...s, savingUserId: null, error: result?.error ?? "表示名の保存に失敗しました。", successMessage: "" }));
+        return;
+      }
     } catch {
-      setState((currentState) => ({
-        ...currentState,
-        savingUserId: null,
-        error: "表示名の保存に失敗しました。",
-        successMessage: "",
-      }));
-      return;
-    }
-
-    if (!response.ok) {
-      const result = (await response.json().catch(() => null)) as { error?: string } | null;
-
-      setState((currentState) => ({
-        ...currentState,
-        savingUserId: null,
-        error: result?.error ?? "表示名の保存に失敗しました。",
-        successMessage: "",
-      }));
+      setState((s) => ({ ...s, savingUserId: null, error: "表示名の保存に失敗しました。", successMessage: "" }));
       return;
     }
 
     const { data, error } = await supabase.rpc("list_family_members_for_current_user");
-
-    if (error) {
-      setState((currentState) => ({
-        ...currentState,
-        savingUserId: null,
-        error: `表示名は保存されましたが再取得に失敗しました: ${error.message}`,
-        successMessage:
-          member.role === "child"
-            ? "子どもの呼び名を保存しました。"
-            : "表示名を保存しました。",
-      }));
-      return;
-    }
-
     const members = Array.isArray(data) ? (data as FamilyMember[]) : [];
+    const msg = member.role === "child" ? "子どもの呼び名を保存しました。" : "表示名を保存しました。";
 
-    setState((currentState) => ({
-      ...currentState,
+    setState((s) => ({
+      ...s,
       savingUserId: null,
-      error: "",
-      successMessage:
-        member.role === "child" ? "子どもの呼び名を保存しました。" : "表示名を保存しました。",
-      members,
+      error: error ? `表示名は保存されましたが再取得に失敗しました: ${error.message}` : "",
+      successMessage: msg,
+      members: error ? s.members : members,
     }));
-    setEditingUserId(null);
+    setEditingNameMember(null);
     window.dispatchEvent(new Event(FAMILY_UPDATED_EVENT));
   };
 
   const handleSaveEmoji = async (member: FamilyMember, emoji: string) => {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await getSafeSession(supabase);
-
-    if (sessionError || !session?.access_token) {
+    const token = await getToken();
+    if (!token) {
       setState((s) => ({ ...s, error: "ログイン状態の確認に失敗しました。", successMessage: "" }));
       return;
     }
 
     setSavingAvatarUserId(member.user_id);
-
     try {
       const response = await fetch(`/api/family-members/${member.user_id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ avatarEmoji: emoji }),
       });
 
@@ -314,12 +230,8 @@ export default function FamilyMembersList() {
   };
 
   const handleUploadPhoto = async (member: FamilyMember, file: File) => {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await getSafeSession(supabase);
-
-    if (sessionError || !session?.access_token) {
+    const token = await getToken();
+    if (!token) {
       setState((s) => ({ ...s, error: "ログイン状態の確認に失敗しました。", successMessage: "" }));
       return;
     }
@@ -335,7 +247,6 @@ export default function FamilyMembersList() {
     }
 
     setUploadingUserId(member.user_id);
-
     try {
       const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
       const path = `family-members/${member.family_id}/${member.user_id}/${Date.now()}.${ext}`;
@@ -351,10 +262,7 @@ export default function FamilyMembersList() {
 
       const response = await fetch(`/api/family-members/${member.user_id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ avatarPath: path }),
       });
 
@@ -373,201 +281,169 @@ export default function FamilyMembersList() {
     }
   };
 
+  const handleDeleteMember = async (member: FamilyMember) => {
+    const token = await getToken();
+    if (!token) {
+      setState((s) => ({ ...s, error: "ログイン状態の確認に失敗しました。", successMessage: "" }));
+      return;
+    }
+
+    setDeletingUserId(member.user_id);
+    try {
+      const response = await fetch(`/api/family-members/${member.user_id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        setState((s) => ({ ...s, error: result?.error ?? "削除に失敗しました。", successMessage: "" }));
+        return;
+      }
+
+      const { data } = await supabase.rpc("list_family_members_for_current_user");
+      const members = Array.isArray(data) ? (data as FamilyMember[]) : [];
+      setState((s) => ({ ...s, error: "", successMessage: `${member.display_label} をファミリーから削除しました。`, members }));
+      setDeleteConfirmMember(null);
+      window.dispatchEvent(new Event(FAMILY_UPDATED_EVENT));
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
   return (
-    <SectionCard
-      title="家族のみんな"
-      description="だれが一緒に使っているかを、ひと目で見られます。"
-    >
-      {state.loading ? (
-        <p className="text-sm text-[var(--text-secondary)]">読み込み中です。</p>
-      ) : state.error ? (
-        <p className="text-sm text-[var(--danger)]">{state.error}</p>
-      ) : state.members.length === 0 ? (
-        <EmptyState
-          title="まだ家族メンバーがいません"
-          description="招待をつくると、ここに家族が並びます。"
-        />
-      ) : (
-        <div className="space-y-4">
-          {state.successMessage ? (
-            <p className="text-sm text-[var(--success)]">{state.successMessage}</p>
-          ) : null}
+    <>
+      <SectionCard
+        title="家族のみんな"
+        description="だれが一緒に使っているかを、ひと目で見られます。"
+      >
+        {state.loading ? (
+          <p className="text-sm text-[var(--text-secondary)]">読み込み中です。</p>
+        ) : state.error ? (
+          <p className="text-sm text-[var(--danger)]">{state.error}</p>
+        ) : state.members.length === 0 ? (
+          <EmptyState
+            title="まだ家族メンバーがいません"
+            description="招待をつくると、ここに家族が並びます。"
+          />
+        ) : (
+          <div className="space-y-4">
+            {state.successMessage ? (
+              <p className="text-sm text-[var(--success)]">{state.successMessage}</p>
+            ) : null}
+            {state.error ? (
+              <p className="text-sm text-[var(--danger)]">{state.error}</p>
+            ) : null}
 
-          {state.error ? (
-            <p className="text-sm text-[var(--danger)]">{state.error}</p>
-          ) : null}
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[22px] bg-[var(--surface-accent)] px-4 py-3">
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">家族メンバー</p>
-              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{state.members.length}</p>
+            {/* Summary counts */}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-[22px] bg-[var(--surface-accent)] px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">家族メンバー</p>
+                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{state.members.length}</p>
+              </div>
+              <div className="rounded-[22px] bg-[var(--surface-soft)] px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">家族管理者</p>
+                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{guardianAdminCount}</p>
+              </div>
+              <div className="rounded-[22px] bg-[rgba(243,251,244,0.92)] px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">親・祖父母</p>
+                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{guardianCount}</p>
+              </div>
+              <div className="rounded-[22px] bg-[var(--surface-pink)] px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">子供</p>
+                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{childCount}</p>
+              </div>
             </div>
-            <div className="rounded-[22px] bg-[var(--surface-soft)] px-4 py-3">
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">家族管理者</p>
-              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{guardianAdminCount}</p>
-            </div>
-            <div className="rounded-[22px] bg-[rgba(243,251,244,0.92)] px-4 py-3">
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">親・祖父母</p>
-              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{guardianCount}</p>
-            </div>
-            <div className="rounded-[22px] bg-[var(--surface-pink)] px-4 py-3">
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">子供</p>
-              <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{childCount}</p>
-            </div>
-          </div>
 
-          <div className="grid gap-3">
-            {state.members.map((member) => {
-              const isCurrentUser = member.user_id === currentUserId;
-              const canEditMember = isCurrentUser || (canEditChildNames && member.role === "child");
-              const isEditing = editingUserId === member.user_id;
+            <div className="grid gap-3">
+              {state.members.map((member) => {
+                const isCurrentUser = member.user_id === currentUserId;
+                const canEditMember = isCurrentUser || (canEditChildNames && member.role === "child");
+                const canDelete = currentUserRole === "guardian_admin" && !isCurrentUser;
 
-              return (
-                <div
-                  key={member.user_id}
-                  className={`overflow-hidden rounded-[26px] border bg-[var(--surface-card-strong)] p-4 shadow-[0_10px_22px_rgba(51,101,63,0.08)] ${
-                    isCurrentUser
-                      ? "border-[rgba(76,163,104,0.28)]"
-                      : "border-[var(--border-soft)]"
-                  }`}
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="flex items-center gap-3">
-                      <MemberAvatar
-                        avatarPath={member.avatar_path}
-                        avatarEmoji={member.avatar_emoji}
-                        displayLabel={member.display_label}
-                        size="md"
-                      />
-                      <div>
-                        <p className="text-base font-bold text-[var(--text-primary)] sm:text-lg">
-                          {member.display_label}
-                          {isCurrentUser ? "（あなた）" : ""}
-                        </p>
-                        {member.display_name ? (
-                          <p className="mt-1 text-xs text-[var(--text-muted)]">
-                            {member.email ?? "メールアドレス未登録"}
-                          </p>
-                        ) : (
-                          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                            {member.email ?? "メールアドレス未登録"}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <StatusBadge tone={familyRoleTone(member.role)}>
-                      {formatFamilyRole(member.role)}
-                    </StatusBadge>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
-                    <div className="rounded-[20px] border border-[rgba(76,163,104,0.14)] bg-[linear-gradient(180deg,rgba(230,245,233,0.96),rgba(253,244,223,0.92))] px-4 py-3">
-                      <p className="text-sm font-semibold text-[var(--text-secondary)]">この家族での役わり</p>
-                      <p className="mt-1 text-base font-bold text-[var(--text-primary)]">{formatFamilyRole(member.role)}</p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      {member.role === "child"
-                        ? "お金の学びをいっしょに進めるメンバーです。"
-                        : "家族の準備や招待を支えるメンバーです。"}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 md:max-w-[220px] md:justify-end">
-                      {isCurrentUser ? (
-                        <span className="inline-flex rounded-full bg-[var(--surface-soft)] px-3 py-1 text-xs font-semibold text-[var(--text-primary)]">
-                          利用中のアカウント
-                        </span>
-                      ) : null}
-                      <span className="inline-flex rounded-full bg-[rgba(243,251,244,0.92)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                        メンバー番号: {member.user_id.slice(0, 8)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {canEditMember ? (
-                    <>
-                      <div className="mt-4 rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.76)] px-4 py-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="text-sm font-bold text-[var(--text-primary)]">
-                              {member.role === "child"
-                                ? "この子の表示名"
-                                : isCurrentUser
-                                  ? "あなたの表示名"
-                                  : "表示名"}
+                return (
+                  <div
+                    key={member.user_id}
+                    className={`overflow-hidden rounded-[26px] border bg-[var(--surface-card-strong)] p-4 shadow-[0_10px_22px_rgba(51,101,63,0.08)] ${
+                      isCurrentUser ? "border-[rgba(76,163,104,0.28)]" : "border-[var(--border-soft)]"
+                    }`}
+                  >
+                    {/* Header: avatar + name/email | role badge + ... menu */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <MemberAvatar
+                          avatarPath={member.avatar_path}
+                          avatarEmoji={member.avatar_emoji}
+                          displayLabel={member.display_label}
+                          size="md"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="text-base font-bold text-[var(--text-primary)] sm:text-lg break-all">
+                              {member.display_label}
+                              {isCurrentUser ? "（あなた）" : ""}
                             </p>
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                              {member.role === "child"
-                                ? "ホーム画面やお小遣い一覧では、この呼び名を優先して使います。"
-                                : "家族の中で見やすい呼び名を登録できます。"}
-                            </p>
-                          </div>
-                          {!isEditing ? (
-                            <SecondaryButton
-                              type="button"
-                              size="sm"
-                              onClick={() => {
-                                setEditingUserId(member.user_id);
-                                setDraftDisplayNames((currentValue) => ({
-                                  ...currentValue,
-                                  [member.user_id]: member.display_name ?? "",
-                                }));
-                              }}
-                            >
-                              {member.role === "child" ? "名前を編集" : "表示名を編集"}
-                            </SecondaryButton>
-                          ) : null}
-                        </div>
-
-                        {isEditing ? (
-                          <form className="mt-4 space-y-3" onSubmit={(event) => handleSaveDisplayName(event, member)}>
-                            <label className="flex flex-col gap-2 text-sm font-bold text-[var(--text-primary)]">
-                              <span>{member.role === "child" ? "呼び名" : "表示名"}</span>
-                              <input
-                                className="min-h-12 rounded-[18px] border border-[var(--border-soft)] bg-white px-4 py-3 text-base text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--focus-ring)]"
-                                value={draftDisplayNames[member.user_id] ?? ""}
-                                onChange={(event) =>
-                                  setDraftDisplayNames((currentValue) => ({
-                                    ...currentValue,
-                                    [member.user_id]: event.target.value,
-                                  }))
-                                }
-                                placeholder={member.role === "child" ? "例: なぎ" : "例: ママ"}
-                              />
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                              <PrimaryButton
-                                type="submit"
-                                size="sm"
-                                fullWidth={false}
-                                disabled={state.savingUserId === member.user_id}
-                              >
-                                {state.savingUserId === member.user_id ? "保存中..." : "保存する"}
-                              </PrimaryButton>
-                              <SecondaryButton
+                            {canEditMember ? (
+                              <button
                                 type="button"
-                                size="sm"
-                                onClick={() => setEditingUserId(null)}
-                                disabled={state.savingUserId === member.user_id}
+                                aria-label="名前を編集"
+                                className="flex-shrink-0 rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-accent)] hover:text-[var(--brand-primary)]"
+                                onClick={() => {
+                                  setDraftDisplayNames((d) => ({ ...d, [member.user_id]: member.display_name ?? "" }));
+                                  setEditingNameMember(member);
+                                }}
                               >
-                                キャンセル
-                              </SecondaryButton>
-                            </div>
-                          </form>
-                        ) : (
-                          <p className="mt-3 text-sm text-[var(--text-secondary)]">
-                            いまの表示:{" "}
-                            <span className="font-bold text-[var(--text-primary)]">
-                              {member.display_name || "未設定"}
-                            </span>
+                                ✏️
+                              </button>
+                            ) : null}
+                          </div>
+                          <p className="mt-0.5 text-xs text-[var(--text-muted)] break-all">
+                            {member.email ?? "メールアドレス未登録"}
                           </p>
-                        )}
+                        </div>
                       </div>
 
+                      {/* Right: role badge + ... menu */}
+                      <div className="flex flex-shrink-0 items-center gap-2">
+                        <StatusBadge tone={familyRoleTone(member.role)}>
+                          {formatFamilyRole(member.role)}
+                        </StatusBadge>
+                        {canDelete ? (
+                          <div className="relative" ref={menuOpenUserId === member.user_id ? menuRef : undefined}>
+                            <button
+                              type="button"
+                              aria-label="メニューを開く"
+                              className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--surface-accent)] hover:text-[var(--text-primary)]"
+                              onClick={() =>
+                                setMenuOpenUserId(menuOpenUserId === member.user_id ? null : member.user_id)
+                              }
+                            >
+                              <span className="text-lg leading-none tracking-wider">•••</span>
+                            </button>
+                            {menuOpenUserId === member.user_id ? (
+                              <div className="absolute right-0 top-9 z-30 min-w-[120px] overflow-hidden rounded-[16px] border border-[var(--border-soft)] bg-white shadow-lg">
+                                <button
+                                  type="button"
+                                  className="w-full px-4 py-3 text-left text-sm font-semibold text-red-500 transition hover:bg-red-50"
+                                  onClick={() => {
+                                    setMenuOpenUserId(null);
+                                    setDeleteConfirmMember(member);
+                                  }}
+                                >
+                                  削除する
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Avatar / emoji edit section */}
+                    {canEditMember ? (
                       <div className="mt-4 rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.76)] px-4 py-4">
                         <p className="text-sm font-bold text-[var(--text-primary)]">写真・アイコン</p>
-                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                          写真またはアイコンを設定できます。
-                        </p>
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">写真またはアイコンを設定できます。</p>
                         <div className="mt-3 flex flex-wrap items-center gap-3">
                           <MemberAvatar
                             avatarPath={member.avatar_path}
@@ -580,9 +456,7 @@ export default function FamilyMembersList() {
                               type="button"
                               size="sm"
                               onClick={() =>
-                                setEmojiPickerUserId(
-                                  emojiPickerUserId === member.user_id ? null : member.user_id
-                                )
+                                setEmojiPickerUserId(emojiPickerUserId === member.user_id ? null : member.user_id)
                               }
                             >
                               アイコンを選ぶ
@@ -611,9 +485,7 @@ export default function FamilyMembersList() {
 
                         {emojiPickerUserId === member.user_id ? (
                           <div className="mt-3">
-                            <p className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">
-                              アイコンを選んでください
-                            </p>
+                            <p className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">アイコンを選んでください</p>
                             <div className="flex flex-wrap gap-2">
                               {EMOJI_OPTIONS.map((emoji) => (
                                 <button
@@ -630,14 +502,89 @@ export default function FamilyMembersList() {
                           </div>
                         ) : null}
                       </div>
-                    </>
-                  ) : null}
-                </div>
-              );
-            })}
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      {/* Name edit modal */}
+      {editingNameMember ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-[28px] bg-white p-6 shadow-2xl">
+            <p className="text-lg font-extrabold text-[var(--text-primary)]">
+              {editingNameMember.role === "child" ? "子どもの呼び名を編集" : "表示名を編集"}
+            </p>
+            <form
+              className="mt-4 space-y-4"
+              onSubmit={(e) => void handleSaveDisplayName(e, editingNameMember)}
+            >
+              <input
+                className="w-full rounded-[18px] border border-[var(--border-soft)] bg-white px-4 py-3 text-base text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--focus-ring)]"
+                value={draftDisplayNames[editingNameMember.user_id] ?? ""}
+                onChange={(e) =>
+                  setDraftDisplayNames((d) => ({ ...d, [editingNameMember.user_id]: e.target.value }))
+                }
+                placeholder={editingNameMember.role === "child" ? "例: なぎ" : "例: ママ"}
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <PrimaryButton
+                  type="submit"
+                  size="sm"
+                  fullWidth={false}
+                  disabled={state.savingUserId === editingNameMember.user_id}
+                >
+                  {state.savingUserId === editingNameMember.user_id ? "保存中..." : "保存する"}
+                </PrimaryButton>
+                <SecondaryButton
+                  type="button"
+                  size="sm"
+                  onClick={() => setEditingNameMember(null)}
+                  disabled={state.savingUserId === editingNameMember.user_id}
+                >
+                  キャンセル
+                </SecondaryButton>
+              </div>
+            </form>
           </div>
         </div>
-      )}
-    </SectionCard>
+      ) : null}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirmMember ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-[28px] bg-white p-6 shadow-2xl">
+            <p className="text-lg font-extrabold text-[var(--text-primary)]">
+              {deleteConfirmMember.display_label} を削除しますか？
+            </p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              ファミリーから削除されます。この操作は取り消せません。
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-[18px] bg-red-500 py-3 text-sm font-bold text-white transition hover:bg-red-600 disabled:opacity-50"
+                disabled={deletingUserId === deleteConfirmMember.user_id}
+                onClick={() => void handleDeleteMember(deleteConfirmMember)}
+              >
+                {deletingUserId === deleteConfirmMember.user_id ? "削除中..." : "削除する"}
+              </button>
+              <SecondaryButton
+                type="button"
+                size="sm"
+                onClick={() => setDeleteConfirmMember(null)}
+                disabled={deletingUserId === deleteConfirmMember.user_id}
+              >
+                キャンセル
+              </SecondaryButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
