@@ -1993,7 +1993,7 @@ export default function AllowanceGrantsPanel({
                       </div>
                       <div className="sm:max-w-[360px]">
                         <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                          必要なときだけ開ける一覧です。状態と評価額をコンパクトにまとめています。
+                          お小遣い履歴一覧です
                         </p>
                       </div>
                       <div className="rounded-[18px] bg-[var(--surface-soft)] px-4 py-3">
@@ -2390,8 +2390,8 @@ export default function AllowanceGrantsPanel({
                     }
                     description={
                       isElementaryChildMode
-                        ? "いま とうししていて、ふえたり へったりを みられる おこづかいです。"
-                        : "いま投資していて、増え方や減り方を見られるお小遣いです。"
+                        ? "いま とうしを しているもの いちらんです"
+                        : "いま投資をしているもの一覧です"
                     }
                   />
                   <div className="grid gap-3">

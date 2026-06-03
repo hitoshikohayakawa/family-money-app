@@ -30,6 +30,8 @@ export default function ChildSettingsPanel() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  // Increment to force MemberAvatar to re-mount and re-fetch signed URL after save
+  const [avatarKey, setAvatarKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadProfile = async (isActive: { current: boolean }) => {
@@ -140,6 +142,7 @@ export default function ChildSettingsPanel() {
       setProfile((prev) =>
         prev ? { ...prev, avatarEmoji: emoji, avatarPath: null } : prev
       );
+      setAvatarKey((k) => k + 1);
       setSuccess("アイコンを保存しました。");
       setShowEmojiPicker(false);
       window.dispatchEvent(new Event(FAMILY_UPDATED_EVENT));
@@ -202,6 +205,7 @@ export default function ChildSettingsPanel() {
       setProfile((prev) =>
         prev ? { ...prev, avatarPath: path, avatarEmoji: null } : prev
       );
+      setAvatarKey((k) => k + 1);
       setSuccess("写真を保存しました。");
       window.dispatchEvent(new Event(FAMILY_UPDATED_EVENT));
     } finally {
@@ -243,8 +247,9 @@ export default function ChildSettingsPanel() {
 
         <div className="mt-5 flex flex-col items-center gap-5">
           {/* Current avatar — large display */}
-          <div className={`rounded-[26px] ring-2 ring-[#F8A9A0]`}>
+          <div className="rounded-[26px] ring-2 ring-[#F8A9A0]">
             <MemberAvatar
+              key={avatarKey}
               avatarPath={profile.avatarPath}
               avatarEmoji={profile.avatarEmoji}
               displayLabel={profile.displayLabel}

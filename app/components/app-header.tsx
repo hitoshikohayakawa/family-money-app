@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import useElementaryMode from "@/app/components/use-elementary-mode";
 import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
+import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import PrimaryButton from "@/app/components/ui/primary-button";
 import SecondaryButton from "@/app/components/ui/secondary-button";
 import StatusBadge from "@/app/components/ui/status-badge";
@@ -181,9 +182,14 @@ export default function AppHeader() {
       void loadSession();
     });
 
+    // Re-fetch profile when family data updates (e.g. avatar change from settings page)
+    const onFamilyUpdated = () => void loadSession();
+    window.addEventListener(FAMILY_UPDATED_EVENT, onFamilyUpdated);
+
     return () => {
       isActive = false;
       subscription.unsubscribe();
+      window.removeEventListener(FAMILY_UPDATED_EVENT, onFamilyUpdated);
     };
   }, []);
 
