@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 
 type NavItem = {
   href: string;
   label: string;
-  icon: React.ReactNode;
   matchPrefix?: boolean;
 };
 
@@ -41,18 +41,28 @@ function FamilyIcon({ active }: { active: boolean }) {
   );
 }
 
+function SettingsIcon({ active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+    </svg>
+  );
+}
+
 export default function FooterNav() {
   const pathname = usePathname();
   const [isChild, setIsChild] = useState(false);
 
   useEffect(() => {
     async function checkRole() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // Use getSafeSession instead of getUser() to avoid Supabase lock contention
+      const { data: { session } } = await getSafeSession(supabase);
+      if (!session?.user) return;
       const { data } = await supabase
         .from("family_memberships")
         .select("role")
-        .eq("user_id", user.id)
+        .eq("user_id", session.user.id)
         .eq("status", "active")
         .maybeSingle();
       setIsChild(data?.role === "child");
@@ -66,9 +76,12 @@ export default function FooterNav() {
   };
 
   const navItems: NavItem[] = [
-    { href: "/", label: "ホーム", icon: null },
-    { href: "/allowance", label: "お小遣い", icon: null },
-    ...(!isChild ? [{ href: "/family", label: "家族設定", icon: null, matchPrefix: true } as NavItem] : []),
+    { href: "/", label: "ホーム" },
+    { href: "/allowance", label: "お小遣い" },
+    ...(isChild
+      ? [{ href: "/settings", label: "設定" } as NavItem]
+      : [{ href: "/family", label: "家族設定", matchPrefix: true } as NavItem]
+    ),
   ];
 
   return (
@@ -86,6 +99,7 @@ export default function FooterNav() {
               {href === "/" && <HomeIcon active={active} />}
               {href === "/allowance" && <WalletIcon active={active} />}
               {href === "/family" && <FamilyIcon active={active} />}
+              {href === "/settings" && <SettingsIcon active={active} />}
               <span>{label}</span>
             </Link>
           );
