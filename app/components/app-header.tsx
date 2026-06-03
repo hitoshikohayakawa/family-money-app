@@ -103,6 +103,13 @@ function IconMegaphone() {
 export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("famimane_read_announcements");
+      if (stored) return new Set(JSON.parse(stored) as string[]);
+    } catch { /* ignore */ }
+    return new Set();
+  });
   const { elementaryMode, setElementaryMode } = useElementaryMode();
   const [state, setState] = useState<HeaderState>({
     email: null,
@@ -238,26 +245,30 @@ export default function AppHeader() {
 
   // ─── Notifications ──────────────────────────────────────────────────────────
 
-  const headerNotifs: NotifItem[] = [];
+  // Operator announcements visible to this role
+  const roleForFilter = isGuardian ? "guardian" : isChild ? "child" : null;
+  const visibleAnnouncements = state.email
+    ? state.announcements.filter(
+        (a) => a.visible_to === "all" || a.visible_to === roleForFilter
+      )
+    : [];
+  const unreadAnnouncementCount = visibleAnnouncements.filter(
+    (a) => !readAnnouncementIds.has(a.id)
+  ).length;
+
+  const announcementNotifs: NotifItem[] = visibleAnnouncements.map((a) => ({
+    key: `announcement-${a.id}`,
+    icon: <IconMegaphone />,
+    iconBg: "bg-[rgba(76,163,104,0.12)]",
+    iconColor: "text-[var(--brand-primary)]",
+    title: a.title,
+    description: a.body,
+    href: a.href ?? "#",
+  }));
+
+  const systemNotifs: NotifItem[] = [];
 
   if (state.email) {
-    // Operator announcements (filtered by visible_to on the client)
-    const roleForFilter = isGuardian ? "guardian" : isChild ? "child" : null;
-    const visibleAnnouncements = state.announcements.filter(
-      (a) => a.visible_to === "all" || a.visible_to === roleForFilter
-    );
-    for (const a of visibleAnnouncements) {
-      headerNotifs.push({
-        key: `announcement-${a.id}`,
-        icon: <IconMegaphone />,
-        iconBg: "bg-[rgba(76,163,104,0.12)]",
-        iconColor: "text-[var(--brand-primary)]",
-        title: a.title,
-        description: a.body,
-        href: a.href ?? "#",
-      });
-    }
-
     const activeGrants = state.grants.filter((g) => !g.cashout_status);
 
     const pendingCashoutsForGuardian = isGuardian
@@ -277,7 +288,7 @@ export default function AppHeader() {
       : [];
 
     if (pendingCashoutsForGuardian.length > 0) {
-      headerNotifs.push({
+      systemNotifs.push({
         key: "cashout",
         icon: <IconCash />,
         iconBg: "bg-[rgba(191,110,82,0.12)]",
@@ -288,7 +299,7 @@ export default function AppHeader() {
       });
     }
     if (pendingDecisionsForGuardian.length > 0) {
-      headerNotifs.push({
+      systemNotifs.push({
         key: "pending-guardian",
         icon: <IconDocument />,
         iconBg: "bg-[rgba(228,163,94,0.12)]",
@@ -299,7 +310,7 @@ export default function AppHeader() {
       });
     }
     if (pendingDecisionsForChild.length > 0) {
-      headerNotifs.push({
+      systemNotifs.push({
         key: "pending-child",
         icon: <IconDocument />,
         iconBg: "bg-[rgba(228,163,94,0.12)]",
@@ -310,7 +321,7 @@ export default function AppHeader() {
       });
     }
     if (!state.hasAvatar) {
-      headerNotifs.push({
+      systemNotifs.push({
         key: "profile",
         icon: <IconCamera />,
         iconBg: "bg-[var(--surface-accent)]",
@@ -322,7 +333,10 @@ export default function AppHeader() {
     }
   }
 
-  const notifCount = headerNotifs.length;
+  // お知らせ（先頭）+ システム通知
+  const headerNotifs = [...announcementNotifs, ...systemNotifs];
+  // バッジ: お知らせは未読分のみ + システム通知は常にカウント
+  const notifCount = unreadAnnouncementCount + systemNotifs.length;
 
   return (
     <header className="sticky top-0 z-40 border-b border-[rgba(84,130,95,0.12)] bg-[rgba(248,252,246,0.9)] backdrop-blur-xl">
@@ -362,8 +376,23 @@ export default function AppHeader() {
                 aria-label="お知らせ"
                 className="relative flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--surface-accent)]"
                 onClick={() => {
-                  setNotifOpen((v) => !v);
+                  const opening = !notifOpen;
+                  setNotifOpen(opening);
                   setMenuOpen(false);
+                  // Mark visible announcements as read when opening
+                  if (opening && visibleAnnouncements.length > 0) {
+                    const ids = visibleAnnouncements.map((a) => a.id);
+                    setReadAnnouncementIds((prev) => {
+                      const next = new Set([...prev, ...ids]);
+                      try {
+                        localStorage.setItem(
+                          "famimane_read_announcements",
+                          JSON.stringify([...next])
+                        );
+                      } catch { /* ignore */ }
+                      return next;
+                    });
+                  }
                 }}
               >
                 <IconBell />
