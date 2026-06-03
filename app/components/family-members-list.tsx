@@ -144,9 +144,6 @@ export default function FamilyMembersList() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpenUserId]);
 
-  const guardianAdminCount = state.members.filter((m) => m.role === "guardian_admin").length;
-  const guardianCount = state.members.filter((m) => m.role === "guardian").length;
-  const childCount = state.members.filter((m) => m.role === "child").length;
   const canEditChildNames = currentUserRole === "guardian_admin" || currentUserRole === "guardian";
 
   const getToken = async () => {
@@ -334,26 +331,6 @@ export default function FamilyMembersList() {
             {state.error ? (
               <p className="text-sm text-[var(--danger)]">{state.error}</p>
             ) : null}
-
-            {/* Summary counts */}
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-[22px] bg-[var(--surface-accent)] px-4 py-3">
-                <p className="text-sm font-semibold text-[var(--text-secondary)]">家族メンバー</p>
-                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{state.members.length}</p>
-              </div>
-              <div className="rounded-[22px] bg-[var(--surface-soft)] px-4 py-3">
-                <p className="text-sm font-semibold text-[var(--text-secondary)]">家族管理者</p>
-                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{guardianAdminCount}</p>
-              </div>
-              <div className="rounded-[22px] bg-[rgba(243,251,244,0.92)] px-4 py-3">
-                <p className="text-sm font-semibold text-[var(--text-secondary)]">親・祖父母</p>
-                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{guardianCount}</p>
-              </div>
-              <div className="rounded-[22px] bg-[var(--surface-pink)] px-4 py-3">
-                <p className="text-sm font-semibold text-[var(--text-secondary)]">子供</p>
-                <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">{childCount}</p>
-              </div>
-            </div>
 
             <div className="grid gap-3">
               {state.members.map((member) => {
