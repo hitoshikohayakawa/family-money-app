@@ -877,23 +877,7 @@ export default function HomeDashboard() {
   }
 
   if (!state.isAuthenticated) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-20 text-center">
-        <p className="text-5xl">🏡</p>
-        <div>
-          <p className="text-2xl font-black text-[var(--text-primary)]">ファミマネへようこそ</p>
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            家族みんなでお金のことを楽しく学びましょう
-          </p>
-        </div>
-        <Link
-          href="/login"
-          className="rounded-full bg-[var(--brand-primary)] px-8 py-3 text-sm font-bold text-white shadow-[0_10px_24px_rgba(51,101,63,0.22)]"
-        >
-          ログインする
-        </Link>
-      </div>
-    );
+    return null;
   }
 
   if (!state.familyId) {

@@ -1,13 +1,5 @@
-import AppHeader from "@/app/components/app-header";
-import HomeDashboard from "@/app/components/home-dashboard";
-import FooterNav from "@/app/components/ui/footer-nav";
+import HomeRoute from "@/app/components/home-route";
 
 export default function Home() {
-  return (
-    <>
-      <AppHeader />
-      <HomeDashboard />
-      <FooterNav />
-    </>
-  );
+  return <HomeRoute />;
 }
