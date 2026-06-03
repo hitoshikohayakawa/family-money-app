@@ -554,6 +554,15 @@ export default function AppHeader() {
                       アカウント設定
                     </Link>
                   ) : null}
+                  {state.role === "guardian_admin" ? (
+                    <Link
+                      href="/admin/campaigns"
+                      className="rounded-[18px] px-4 py-3 text-sm font-bold text-[var(--brand-primary)] hover:bg-[var(--surface-accent)]"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      📣 メール配信管理
+                    </Link>
+                  ) : null}
                 </nav>
 
                 {isChild ? (
