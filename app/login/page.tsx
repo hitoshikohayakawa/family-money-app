@@ -92,6 +92,15 @@ function LoginPageContent() {
       return;
     }
 
+    // Block logically-deleted users (family_memberships.status = 'disabled')
+    const { data: isDisabled } = await supabase.rpc("is_own_membership_disabled");
+    if (isDisabled) {
+      await supabase.auth.signOut();
+      setErrorMessage("存在しないアカウントです。新規登録を行ってください。");
+      setIsSubmitting(false);
+      return;
+    }
+
     router.replace(
       Boolean(data.user?.user_metadata?.requires_password_setup)
         ? `/setup-password?next=${encodeURIComponent(nextPath)}`
