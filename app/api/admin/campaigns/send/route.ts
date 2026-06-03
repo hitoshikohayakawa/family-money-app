@@ -70,7 +70,8 @@ export async function POST(request: Request) {
   const authorization = request.headers.get("authorization");
   if (!authorization?.startsWith("Bearer ")) return jsonError("認証が必要です", 401);
 
-  // Verify caller is guardian_admin
+  // Verify caller is the service operator (is_operator = true in profiles)
+  // This flag is set ONLY via Supabase Studio — general users cannot set it.
   const userClient = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authorization } },
   });
@@ -81,13 +82,12 @@ export async function POST(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data: membership } = await adminClient
-    .from("family_memberships")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("status", "active")
+  const { data: operatorProfile } = await adminClient
+    .from("profiles")
+    .select("is_operator")
+    .eq("id", user.id)
     .maybeSingle();
-  if (membership?.role !== "guardian_admin") return jsonError("権限がありません", 403);
+  if (!operatorProfile?.is_operator) return jsonError("権限がありません。事務局アカウントのみ送信できます。", 403);
 
   let body: unknown;
   try { body = await request.json(); } catch { return jsonError("リクエストを読み取れません"); }

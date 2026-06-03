@@ -13,7 +13,8 @@ function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
-async function getGuardianAdmin(authorization: string | null) {
+// Only accounts with is_operator = true (set via Supabase Studio) can manage campaigns.
+async function getOperator(authorization: string | null) {
   if (!authorization?.startsWith("Bearer ") || !supabaseUrl || !supabaseAnonKey) return null;
   const userClient = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authorization } },
@@ -24,14 +25,13 @@ async function getGuardianAdmin(authorization: string | null) {
   const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey!, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { data: membership } = await adminClient
-    .from("family_memberships")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("status", "active")
+  const { data: profile } = await adminClient
+    .from("profiles")
+    .select("is_operator")
+    .eq("id", user.id)
     .maybeSingle();
 
-  if (membership?.role !== "guardian_admin") return null;
+  if (!profile?.is_operator) return null;
   return user;
 }
 
@@ -40,8 +40,8 @@ export async function GET(request: Request) {
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
     return jsonError("Server configuration error", 500);
   }
-  const user = await getGuardianAdmin(request.headers.get("authorization"));
-  if (!user) return jsonError("権限がありません", 403);
+  const user = await getOperator(request.headers.get("authorization"));
+  if (!user) return jsonError("権限がありません。事務局アカウントのみ操作できます。", 403);
 
   const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -61,8 +61,8 @@ export async function POST(request: Request) {
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
     return jsonError("Server configuration error", 500);
   }
-  const user = await getGuardianAdmin(request.headers.get("authorization"));
-  if (!user) return jsonError("権限がありません", 403);
+  const user = await getOperator(request.headers.get("authorization"));
+  if (!user) return jsonError("権限がありません。事務局アカウントのみ操作できます。", 403);
 
   let body: unknown;
   try { body = await request.json(); } catch { return jsonError("リクエストを読み取れません"); }

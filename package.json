@@ -24,7 +24,8 @@
     "sb:stop": "supabase stop",
     "sb:status": "supabase status",
     "sb:push": "node scripts/push-supabase-db.mjs",
-    "sb:push:raw": "supabase db push"
+    "sb:push:raw": "supabase db push",
+    "campaign:send": "node scripts/send-campaign.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
