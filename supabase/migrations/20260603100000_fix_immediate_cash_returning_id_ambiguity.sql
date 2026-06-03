@@ -1,3 +1,8 @@
+-- Fix "column reference id is ambiguous" in request_immediate_cash_for_allowance.
+-- The 20260531100000 migration changed "returning allowance_cashout_requests.id"
+-- back to "returning id", which conflicts with the returns-table output column "id".
+-- Restore the table-qualified form to resolve the ambiguity.
+
 create or replace function public.request_immediate_cash_for_allowance(
   target_allowance_grant_id uuid
 )
@@ -119,25 +124,28 @@ begin
     );
   end if;
 
-
   return query
   select
     ag.id,
     ag.family_id,
     ag.child_user_id,
-    child_profile.email,
-    coalesce(nullif(child_profile.display_name, ''), child_profile.email, ag.child_user_id::text),
+    child_profile.email as child_email,
+    coalesce(
+      nullif(child_profile.display_name, ''),
+      child_profile.email,
+      ag.child_user_id::text
+    ) as child_display_label,
     ag.granted_by_user_id,
-    guardian_profile.email,
+    guardian_profile.email as granted_by_email,
     coalesce(
       nullif(guardian_profile.display_name, ''),
       guardian_profile.email,
       ag.granted_by_user_id::text
-    ),
+    ) as granted_by_display_label,
     ag.amount_jpy,
     ag.note,
     ag.granted_at,
-    gd.decision_status::text,
+    gd.decision_status::text as decision_status,
     gd.decided_at,
     ag.created_at
   from public.allowance_grants ag
