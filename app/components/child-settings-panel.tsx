@@ -52,13 +52,13 @@ export default function ChildSettingsPanel() {
     const [{ data: membership }, { data: prof }] = await Promise.all([
       supabase
         .from("family_memberships")
-        .select("family_id")
+        .select("family_id, avatar_path, avatar_emoji")
         .eq("user_id", userId)
         .eq("status", "active")
         .maybeSingle(),
       supabase
         .from("profiles")
-        .select("display_name, avatar_path, avatar_emoji")
+        .select("display_name")
         .eq("id", userId)
         .maybeSingle(),
     ]);
@@ -74,8 +74,8 @@ export default function ChildSettingsPanel() {
       userId,
       familyId: membership?.family_id ?? "",
       displayName,
-      avatarPath: prof?.avatar_path ?? null,
-      avatarEmoji: prof?.avatar_emoji ?? null,
+      avatarPath: membership?.avatar_path ?? null,
+      avatarEmoji: membership?.avatar_emoji ?? null,
       displayLabel,
     });
     setLoading(false);
