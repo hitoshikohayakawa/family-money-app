@@ -8,10 +8,6 @@ import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import MemberAvatar from "@/app/components/ui/member-avatar";
 import StatusBadge from "@/app/components/ui/status-badge";
-import {
-  formatFamilyRoleShort,
-  familyRoleShortTone,
-} from "@/app/components/ui/family-labels";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -36,6 +32,8 @@ type GrantRow = {
   unrealized_gain_jpy: number | null;
   cashout_status: string | null;
   cashout_requested_amount_jpy: number | null;
+  granted_at: string;
+  cashout_paid_at: string | null;
 };
 
 type HomeState = {
@@ -59,6 +57,413 @@ function formatCurrency(amount: number) {
     currency: "JPY",
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+// ─── Chart helpers ────────────────────────────────────────────────────────────
+
+type MonthlyEntry = {
+  key: string;
+  label: string;
+  income: number;
+  paid: number;
+  balance: number;
+};
+
+function computeDonutData(grants: GrantRow[]) {
+  let invested = 0;
+  let received = 0;
+  let pending = 0;
+  for (const g of grants) {
+    if (g.decision_status === "invested" && !g.cashout_status) {
+      invested += g.current_value_jpy ?? g.amount_jpy;
+    } else if (
+      g.decision_status === "immediate_cash_requested" ||
+      g.cashout_status === "requested" ||
+      g.cashout_status === "paid"
+    ) {
+      received += g.cashout_requested_amount_jpy ?? g.amount_jpy;
+    } else if (g.decision_status === "pending" && !g.cashout_status) {
+      pending += g.amount_jpy;
+    }
+  }
+  return { invested, received, pending };
+}
+
+function computeMonthlyData(grants: GrantRow[], totalAssets: number): MonthlyEntry[] {
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const months: { key: string; label: string }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = `${d.getMonth() + 1}月`;
+    months.push({ key, label });
+  }
+
+  return months.map(({ key, label }) => {
+    if (key === currentMonthKey) {
+      // 当月は現在の実際の総資産（投資評価額含む）
+      return { key, label, income: totalAssets, paid: 0, balance: totalAssets };
+    }
+
+    // 過去月：その月末時点での累積付与額 − 累積払い出し済み額
+    let cumulativeGrants = 0;
+    let cumulativeCashouts = 0;
+
+    for (const g of grants) {
+      if (g.granted_at.slice(0, 7) <= key) {
+        cumulativeGrants += g.amount_jpy;
+      }
+      if (g.cashout_status === "paid" && g.cashout_paid_at) {
+        if (g.cashout_paid_at.slice(0, 7) <= key) {
+          cumulativeCashouts += g.cashout_requested_amount_jpy ?? 0;
+        }
+      }
+    }
+
+    const value = Math.max(0, cumulativeGrants - cumulativeCashouts);
+    return { key, label, income: value, paid: 0, balance: value };
+  });
+}
+
+// ─── SVG Chart components ─────────────────────────────────────────────────────
+
+// Fritsch-Carlson monotone cubic spline segments
+// Guarantees curves never overshoot between points (no dipping below flat sections)
+type BezierSeg = {
+  p0: { x: number; y: number };
+  cp1: { x: number; y: number };
+  cp2: { x: number; y: number };
+  p1: { x: number; y: number };
+};
+
+function computeMonotoneSegments(pts: { x: number; y: number }[]): BezierSeg[] {
+  const n = pts.length;
+  if (n < 2) return [];
+
+  // Step 1: slopes between consecutive points
+  const slopes = pts.slice(0, -1).map((p, i) => {
+    const dx = pts[i + 1].x - p.x;
+    return dx === 0 ? 0 : (pts[i + 1].y - p.y) / dx;
+  });
+
+  // Step 2: tangents via three-point averaging
+  const m: number[] = new Array(n);
+  m[0] = slopes[0];
+  m[n - 1] = slopes[n - 2];
+  for (let i = 1; i < n - 1; i++) {
+    // If sign changes → local extremum → flat tangent (prevents overshoot)
+    m[i] = slopes[i - 1] * slopes[i] <= 0 ? 0 : (slopes[i - 1] + slopes[i]) / 2;
+  }
+
+  // Step 3: Fritsch-Carlson monotonicity constraint
+  for (let i = 0; i < n - 1; i++) {
+    if (slopes[i] === 0) {
+      m[i] = 0;
+      m[i + 1] = 0;
+    } else {
+      const alpha = m[i] / slopes[i];
+      const beta = m[i + 1] / slopes[i];
+      const h = Math.sqrt(alpha * alpha + beta * beta);
+      if (h > 3) {
+        const scale = 3 / h;
+        m[i] = scale * alpha * slopes[i];
+        m[i + 1] = scale * beta * slopes[i];
+      }
+    }
+  }
+
+  // Step 4: convert tangents to cubic Bezier control points
+  return pts.slice(0, -1).map((p, i) => {
+    const dx = pts[i + 1].x - p.x;
+    return {
+      p0: p,
+      cp1: { x: p.x + dx / 3, y: p.y + (m[i] * dx) / 3 },
+      cp2: { x: pts[i + 1].x - dx / 3, y: pts[i + 1].y - (m[i + 1] * dx) / 3 },
+      p1: pts[i + 1],
+    };
+  });
+}
+
+function buildSmoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length === 0) return "";
+  if (pts.length === 1) return `M ${pts[0].x},${pts[0].y}`;
+  const segs = computeMonotoneSegments(pts);
+  let d = `M ${pts[0].x},${pts[0].y}`;
+  for (const s of segs) {
+    d += ` C ${s.cp1.x.toFixed(1)},${s.cp1.y.toFixed(1)} ${s.cp2.x.toFixed(1)},${s.cp2.y.toFixed(1)} ${s.p1.x.toFixed(1)},${s.p1.y.toFixed(1)}`;
+  }
+  return d;
+}
+
+function approximateBezierLength(pts: { x: number; y: number }[]): number {
+  if (pts.length <= 1) return 0;
+  const segs = computeMonotoneSegments(pts);
+  const samples = 20;
+  let total = 0;
+  for (const seg of segs) {
+    let prev = seg.p0;
+    for (let s = 1; s <= samples; s++) {
+      const tv = s / samples;
+      const mt = 1 - tv;
+      const curr = {
+        x: mt ** 3 * seg.p0.x + 3 * mt ** 2 * tv * seg.cp1.x + 3 * mt * tv ** 2 * seg.cp2.x + tv ** 3 * seg.p1.x,
+        y: mt ** 3 * seg.p0.y + 3 * mt ** 2 * tv * seg.cp1.y + 3 * mt * tv ** 2 * seg.cp2.y + tv ** 3 * seg.p1.y,
+      };
+      total += Math.sqrt((curr.x - prev.x) ** 2 + (curr.y - prev.y) ** 2);
+      prev = curr;
+    }
+  }
+  return total;
+}
+
+function DonutChart({
+  invested,
+  received,
+  pending,
+}: {
+  invested: number;
+  received: number;
+  pending: number;
+}) {
+  const total = invested + received + pending;
+  const r = 52;
+  const cx = 70;
+  const cy = 70;
+  const circ = 2 * Math.PI * r;
+  const gap = 3;
+
+  const segments = [
+    { value: invested, color: "#2F8F57" },
+    { value: received, color: "#F5C97A" },
+    { value: pending, color: "#B9DCF7" },
+  ];
+
+  let cumulative = 0;
+  const arcs = segments.flatMap((seg, i) => {
+    if (total === 0 || seg.value <= 0) return [];
+    const ratio = seg.value / total;
+    const dash = Math.max(0, ratio * circ - gap);
+    if (dash <= 0) return [];
+    const dashoffset = circ * 0.25 - cumulative;
+    cumulative += ratio * circ;
+    return [
+      <circle
+        key={i}
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke={seg.color}
+        strokeWidth={15}
+        strokeDasharray={`${dash} ${circ}`}
+        strokeDashoffset={dashoffset}
+        strokeLinecap="butt"
+      />,
+    ];
+  });
+
+  return (
+    <svg
+      viewBox="0 0 140 140"
+      style={{ width: "140px", height: "140px", flexShrink: 0 }}
+      aria-hidden="true"
+    >
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E8F5EC" strokeWidth={15} />
+      {arcs}
+      {total === 0 ? (
+        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize="9" fill="#8BA89B">
+          データなし
+        </text>
+      ) : (
+        <>
+          <text x={cx} y={cy - 8} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#8BA89B">
+            合計
+          </text>
+          <text x={cx} y={cy + 7} textAnchor="middle" dominantBaseline="middle" fontSize="10" fill="#183529" fontWeight="bold">
+            {formatCurrency(total)}
+          </text>
+        </>
+      )}
+    </svg>
+  );
+}
+
+function MiniLineChart({ data }: { data: MonthlyEntry[] }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [animDone, setAnimDone] = useState(false);
+
+  // viewBox 600×120 (5:1) — no preserveAspectRatio="none" so circles/text are not distorted
+  const w = 600;
+  const h = 120;
+  const px = 12;
+  const py = 16;
+  const labelH = 22;
+  const ch = h - py - labelH;
+
+  const hasActivity = data.some((d) => d.income > 0);
+
+  const values = data.map((d) => d.income);
+  const maxVal = Math.max(1, ...values);
+
+  const toY = (v: number) => py + ((maxVal - v) / maxVal) * ch;
+  const toX = (i: number) =>
+    data.length <= 1 ? w / 2 : px + (i / (data.length - 1)) * (w - 2 * px);
+
+  const baselineY = py + ch;
+  const pts = data.map((d, i) => ({ x: toX(i), y: toY(d.income) }));
+
+  const linePath = buildSmoothPath(pts);
+  const lineLen = approximateBezierLength(pts);
+  const areaPath =
+    pts.length > 0
+      ? `${linePath} L ${pts[pts.length - 1].x},${baselineY} L ${pts[0].x},${baselineY} Z`
+      : "";
+
+  // Trigger draw animation via requestAnimationFrame
+  useEffect(() => {
+    let cancelled = false;
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (!cancelled) setAnimDone(true);
+      })
+    );
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, []);
+
+  const updateHovered = (svgEl: SVGSVGElement, clientX: number) => {
+    const rect = svgEl.getBoundingClientRect();
+    const svgX = ((clientX - rect.left) / rect.width) * w;
+    let best = 0;
+    let bestDist = Infinity;
+    pts.forEach((p, i) => {
+      const d = Math.abs(p.x - svgX);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    });
+    setHoveredIdx(best);
+  };
+
+  if (!hasActivity) return null;
+
+  const tipLeft = hoveredIdx !== null ? (pts[hoveredIdx].x / w) * 100 : 0;
+  const tipTop = hoveredIdx !== null ? (pts[hoveredIdx].y / h) * 100 : 0;
+
+  return (
+    <div className="relative w-full">
+      {/* Tooltip */}
+      {hoveredIdx !== null && (
+        <div
+          className="pointer-events-none absolute z-10"
+          style={{
+            left: `${tipLeft}%`,
+            top: `${tipTop}%`,
+            transform: "translate(-50%, calc(-100% - 10px))",
+          }}
+        >
+          <div className="rounded-xl bg-[#183529] px-3 py-2 shadow-xl">
+            <p className="text-[10px] font-semibold leading-none text-white/60">
+              {data[hoveredIdx].label}
+            </p>
+            <p className="mt-1 text-sm font-black leading-none text-white">
+              {formatCurrency(data[hoveredIdx].income)}
+            </p>
+          </div>
+          <div className="mx-auto h-2.5 w-px bg-[#183529]" />
+        </div>
+      )}
+
+      {/* SVG with natural aspect ratio — no preserveAspectRatio="none" to avoid distortion */}
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        width="100%"
+        className="block cursor-crosshair select-none"
+        aria-hidden="true"
+        onMouseMove={(e) => updateHovered(e.currentTarget, e.clientX)}
+        onMouseLeave={() => setHoveredIdx(null)}
+        onClick={(e) => updateHovered(e.currentTarget, e.clientX)}
+      >
+        {/* Area fill — fade in after line draws */}
+        <path
+          d={areaPath}
+          fill="#DDF4E7"
+          style={{
+            fillOpacity: animDone ? 0.9 : 0,
+            transition: "fill-opacity 1.0s ease 1.2s",
+          }}
+        />
+
+        {/* Hover vertical indicator */}
+        {hoveredIdx !== null && (
+          <line
+            x1={pts[hoveredIdx].x}
+            y1={py}
+            x2={pts[hoveredIdx].x}
+            y2={baselineY}
+            stroke="#2F8F57"
+            strokeWidth={1.5}
+            strokeDasharray="5 3"
+            opacity="0.5"
+          />
+        )}
+
+        {/* Smooth curved line — draw animation via stroke-dashoffset */}
+        <path
+          d={linePath}
+          fill="none"
+          stroke="#2F8F57"
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={lineLen > 0 ? lineLen : undefined}
+          strokeDashoffset={lineLen > 0 ? (animDone ? 0 : lineLen) : undefined}
+          style={
+            lineLen > 0
+              ? { transition: "stroke-dashoffset 1.8s cubic-bezier(0.4,0,0.2,1)" }
+              : undefined
+          }
+        />
+
+        {/* Data points — staggered fade in */}
+        {pts.map((p, i) => (
+          <circle
+            key={i}
+            cx={p.x}
+            cy={p.y}
+            r={hoveredIdx === i ? 8 : 5}
+            fill={hoveredIdx === i ? "white" : "#2F8F57"}
+            stroke="#2F8F57"
+            strokeWidth={hoveredIdx === i ? 3 : 0}
+            style={{
+              opacity: animDone ? 1 : 0,
+              transition: `opacity 0.5s ease ${1.5 + i * 0.1}s`,
+            }}
+          />
+        ))}
+
+        {/* Month labels */}
+        {data.map((d, i) => (
+          <text
+            key={i}
+            x={toX(i)}
+            y={h - 5}
+            textAnchor="middle"
+            fontSize="14"
+            fill={hoveredIdx === i ? "#2F8F57" : "#8BA89B"}
+            fontWeight={hoveredIdx === i ? "bold" : "normal"}
+          >
+            {d.label}
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
 }
 
 // ─── SVG Icons ───────────────────────────────────────────────────────────────
@@ -160,21 +565,21 @@ function MemberCard({
   navigable?: boolean;
 }) {
   const isChild = member.role === "child";
-  const roleLabel = formatFamilyRoleShort(member.role);
-  const roleTone = familyRoleShortTone(member.role);
 
   const inner = (
     <div className="flex w-20 flex-col items-center gap-1.5 text-center">
-      <MemberAvatar
-        avatarPath={member.avatar_path}
-        avatarEmoji={member.avatar_emoji}
-        displayLabel={member.display_label}
-        size="lg"
-      />
+      <div className={`rounded-[22px] ring-2 ${isChild ? "ring-[#F8A9A0]" : "ring-[#4CA368]"}`}>
+        <MemberAvatar
+          avatarPath={member.avatar_path}
+          avatarEmoji={member.avatar_emoji}
+          displayLabel={member.display_label}
+          fallbackBgClass={isChild ? "bg-[#FDE8E4]" : "bg-[#E6F5EA]"}
+          size="lg"
+        />
+      </div>
       <p className="w-full truncate text-xs font-bold text-[var(--text-primary)]">
         {member.display_label}
       </p>
-      <StatusBadge tone={roleTone}>{roleLabel}</StatusBadge>
       {isSelf ? <StatusBadge tone="success">あなた</StatusBadge> : null}
       {isChild && navigable ? (
         <p className="text-[10px] font-semibold text-[var(--brand-primary)]">お小遣いを見る</p>
@@ -331,6 +736,10 @@ export default function HomeDashboard() {
     (sum, g) => sum + (g.cashout_requested_amount_jpy ?? 0),
     0
   );
+
+  const donutData = computeDonutData(state.grants);
+  const monthlyData = computeMonthlyData(state.grants, totalAssets);
+  const hasMonthlyActivity = monthlyData.some((d) => d.income > 0);
 
   // Notifications
   const pendingCashoutsForGuardian = isGuardian
@@ -574,11 +983,11 @@ export default function HomeDashboard() {
             </Card>
           ) : null}
 
-          {/* 3. Allowance summary */}
+          {/* 3. Asset summary — main card */}
           <Card>
             <div className="flex items-center justify-between gap-3">
               <SectionTitle>
-                {isGuardian ? "家族の資産サマリー" : "あなたのお小遣い"}
+                {isGuardian ? "家族の資産サマリー" : "あなたのお小遣いサマリー"}
               </SectionTitle>
               <Link
                 href="/allowance"
@@ -605,26 +1014,78 @@ export default function HomeDashboard() {
               ) : null}
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {[
-                { label: "お小遣い総額", value: totalAllowance },
-                { label: "投資中", value: totalInvested },
-                { label: "これまで支払い済み", value: totalPaid },
-              ].map(({ label, value }) => (
-                <div
-                  key={label}
-                  className="rounded-[18px] bg-[var(--surface-accent)] p-3 text-center"
-                >
-                  <p className="text-[10px] font-semibold leading-tight text-[var(--text-secondary)]">
-                    {label}
-                  </p>
-                  <p className="mt-1 text-sm font-black text-[var(--text-primary)]">
-                    {formatCurrency(value)}
-                  </p>
-                </div>
-              ))}
-            </div>
+            {hasMonthlyActivity ? (
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">
+                  資産推移（過去6ヶ月）
+                </p>
+                <MiniLineChart data={monthlyData} />
+              </div>
+            ) : null}
           </Card>
+
+          {/* 3b. Donut + Breakdown grid */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Donut card */}
+            <Card>
+              <SectionTitle>お金の使い方</SectionTitle>
+              <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+                <DonutChart
+                  invested={donutData.invested}
+                  received={donutData.received}
+                  pending={donutData.pending}
+                />
+                <div className="flex w-full flex-col gap-2.5 sm:flex-1">
+                  {(
+                    [
+                      { label: "投資中", value: donutData.invested, color: "#2F8F57" },
+                      {
+                        label: "受け取り予定・受け取り済み",
+                        value: donutData.received,
+                        color: "#F5C97A",
+                      },
+                      { label: "まだ選んでいない", value: donutData.pending, color: "#B9DCF7" },
+                    ] as const
+                  ).map(({ label, value, color }) => (
+                    <div key={label} className="flex items-start gap-2">
+                      <span
+                        className="mt-0.5 h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="flex-1 text-xs leading-snug text-[var(--text-secondary)]">
+                        {label}
+                      </span>
+                      <span className="pl-2 text-xs font-bold tabular-nums text-[var(--text-primary)]">
+                        {formatCurrency(value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            {/* Breakdown card */}
+            <Card>
+              <SectionTitle>内訳</SectionTitle>
+              <div className="mt-4 flex flex-col gap-3">
+                {[
+                  { label: "お小遣い総額", value: totalAllowance },
+                  { label: "投資中", value: totalInvested },
+                  { label: "これまで支払い済み", value: totalPaid },
+                ].map(({ label, value }) => (
+                  <div
+                    key={label}
+                    className="rounded-[18px] bg-[var(--surface-accent)] px-4 py-3"
+                  >
+                    <p className="text-xs font-semibold text-[var(--text-secondary)]">{label}</p>
+                    <p className="mt-1 text-lg font-black text-[var(--text-primary)]">
+                      {formatCurrency(value)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
 
           {/* 4. Notifications */}
           <Card>

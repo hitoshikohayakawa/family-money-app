@@ -9,6 +9,7 @@ type Props = {
   displayLabel: string;
   size?: "sm" | "md" | "lg";
   className?: string;
+  fallbackBgClass?: string;
 };
 
 const sizeClasses = {
@@ -23,6 +24,7 @@ export default function MemberAvatar({
   displayLabel,
   size = "md",
   className = "",
+  fallbackBgClass,
 }: Props) {
   // { path, url } – only used when path matches current avatarPath
   const [loaded, setLoaded] = useState<{ path: string; url: string } | null>(null);
@@ -70,14 +72,14 @@ export default function MemberAvatar({
 
   if (avatarEmoji) {
     return (
-      <div className={`${baseClass} bg-[var(--surface-accent)]`}>
+      <div className={`${baseClass} ${fallbackBgClass ?? "bg-[var(--surface-accent)]"}`}>
         {avatarEmoji}
       </div>
     );
   }
 
   return (
-    <div className={`${baseClass} bg-[var(--surface-accent)] font-bold text-[var(--brand-primary-strong)]`}>
+    <div className={`${baseClass} ${fallbackBgClass ?? "bg-[var(--surface-accent)]"} font-bold text-[var(--brand-primary-strong)]`}>
       {displayLabel.slice(0, 1)}
     </div>
   );
