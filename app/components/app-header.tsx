@@ -20,6 +20,14 @@ type HeaderGrantRow = {
   cashout_status: string | null;
 };
 
+type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  href: string | null;
+  visible_to: string;
+};
+
 type HeaderState = {
   email: string | null;
   displayName: string | null;
@@ -29,6 +37,7 @@ type HeaderState = {
   loading: boolean;
   signingOut: boolean;
   grants: HeaderGrantRow[];
+  announcements: Announcement[];
 };
 
 type NotifItem = {
@@ -81,6 +90,14 @@ function IconCamera() {
   );
 }
 
+function IconMegaphone() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 11l19-9-9 19-2-8-8-2z" />
+    </svg>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AppHeader() {
@@ -96,6 +113,7 @@ export default function AppHeader() {
     loading: true,
     signingOut: false,
     grants: [],
+    announcements: [],
   });
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -123,7 +141,7 @@ export default function AppHeader() {
         data: { session },
       } = await getSafeSession(supabase);
 
-      const [{ data: membership }, { data: profile }, { data: grantsRaw }] = session?.user
+      const [{ data: membership }, { data: profile }, { data: grantsRaw }, { data: announcementsRaw }] = session?.user
         ? await Promise.all([
             supabase
               .from("family_memberships")
@@ -137,8 +155,12 @@ export default function AppHeader() {
               .eq("id", session.user.id)
               .maybeSingle(),
             supabase.rpc("list_allowance_grants_for_current_user"),
+            supabase
+              .from("app_announcements")
+              .select("id, title, body, href, visible_to")
+              .order("published_at", { ascending: false }),
           ])
-        : [{ data: null }, { data: null }, { data: null }];
+        : [{ data: null }, { data: null }, { data: null }, { data: null }];
 
       if (!isActive) {
         return;
@@ -155,6 +177,7 @@ export default function AppHeader() {
         role: typeof membership?.role === "string" ? membership.role : null,
         hasAvatar: !!(membership?.avatar_path || membership?.avatar_emoji),
         grants: Array.isArray(grantsRaw) ? (grantsRaw as HeaderGrantRow[]) : [],
+        announcements: Array.isArray(announcementsRaw) ? (announcementsRaw as Announcement[]) : [],
         loading: false,
       }));
     };
@@ -176,6 +199,7 @@ export default function AppHeader() {
         role: null,
         hasAvatar: false,
         grants: [],
+        announcements: [],
         loading: false,
         signingOut: false,
       }));
@@ -217,6 +241,23 @@ export default function AppHeader() {
   const headerNotifs: NotifItem[] = [];
 
   if (state.email) {
+    // Operator announcements (filtered by visible_to on the client)
+    const roleForFilter = isGuardian ? "guardian" : isChild ? "child" : null;
+    const visibleAnnouncements = state.announcements.filter(
+      (a) => a.visible_to === "all" || a.visible_to === roleForFilter
+    );
+    for (const a of visibleAnnouncements) {
+      headerNotifs.push({
+        key: `announcement-${a.id}`,
+        icon: <IconMegaphone />,
+        iconBg: "bg-[rgba(76,163,104,0.12)]",
+        iconColor: "text-[var(--brand-primary)]",
+        title: a.title,
+        description: a.body,
+        href: a.href ?? "#",
+      });
+    }
+
     const activeGrants = state.grants.filter((g) => !g.cashout_status);
 
     const pendingCashoutsForGuardian = isGuardian
@@ -355,35 +396,52 @@ export default function AppHeader() {
                     </div>
                   ) : (
                     <div className="mt-3 grid gap-2">
-                      {headerNotifs.map((n) => (
-                        <Link
-                          key={n.key}
-                          href={n.href}
-                          className="flex items-center gap-3 rounded-[20px] border border-[var(--border-soft)] bg-white px-4 py-3 transition hover:bg-[var(--surface-accent)]"
-                          onClick={() => setNotifOpen(false)}
-                        >
+                      {headerNotifs.map((n) => {
+                        const hasLink = n.href !== "#";
+                        const inner = (
+                          <>
+                            <div
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${n.iconBg} ${n.iconColor}`}
+                            >
+                              {n.icon}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-[var(--text-primary)]">
+                                {n.title}
+                              </p>
+                              <p className="text-xs text-[var(--text-secondary)]">{n.description}</p>
+                            </div>
+                            {hasLink ? (
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <polyline points="9 18 15 12 9 6" />
+                              </svg>
+                            ) : null}
+                          </>
+                        );
+                        return hasLink ? (
+                          <Link
+                            key={n.key}
+                            href={n.href}
+                            className="flex items-center gap-3 rounded-[20px] border border-[var(--border-soft)] bg-white px-4 py-3 transition hover:bg-[var(--surface-accent)]"
+                            onClick={() => setNotifOpen(false)}
+                          >
+                            {inner}
+                          </Link>
+                        ) : (
                           <div
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${n.iconBg} ${n.iconColor}`}
+                            key={n.key}
+                            className="flex items-center gap-3 rounded-[20px] border border-[var(--border-soft)] bg-white px-4 py-3"
                           >
-                            {n.icon}
+                            {inner}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-[var(--text-primary)]">
-                              {n.title}
-                            </p>
-                            <p className="text-xs text-[var(--text-secondary)]">{n.description}</p>
-                          </div>
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <polyline points="9 18 15 12 9 6" />
-                          </svg>
-                        </Link>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
