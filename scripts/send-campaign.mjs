@@ -132,6 +132,18 @@ if (campaignError || !campaign) {
   console.error("❌  キャンペーンが見つかりません:", campaignError?.message);
   process.exit(1);
 }
+// Validate enum values (mirrors public.email_campaign_target_role / email_campaign_status)
+const VALID_TARGET_ROLES = ["all", "guardian", "child"];
+const VALID_STATUSES     = ["draft", "sending", "done", "failed"];
+
+if (!VALID_TARGET_ROLES.includes(campaign.target_role)) {
+  console.error(`❌  不正な target_role: "${campaign.target_role}". 有効値: ${VALID_TARGET_ROLES.join(", ")}`);
+  process.exit(1);
+}
+if (!VALID_STATUSES.includes(campaign.status)) {
+  console.error(`❌  不正な status: "${campaign.status}". 有効値: ${VALID_STATUSES.join(", ")}`);
+  process.exit(1);
+}
 if (campaign.status === "sending") {
   console.error("❌  このキャンペーンはすでに送信中です。");
   process.exit(1);

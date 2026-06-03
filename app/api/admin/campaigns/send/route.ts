@@ -24,6 +24,18 @@ function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+// Mirrors public.email_campaign_target_role / status / type enums in DB
+type CampaignTargetRole = "all" | "guardian" | "child";
+type CampaignStatus = "draft" | "sending" | "done" | "failed";
+
+type Campaign = {
+  id: string;
+  subject: string;
+  body_text: string;
+  target_role: CampaignTargetRole;
+  status: CampaignStatus;
+};
+
 type Recipient = { user_id: string; email: string; unsubscribe_token: string };
 
 async function sendOneEmail(
@@ -95,13 +107,14 @@ export async function POST(request: Request) {
   if (typeof campaignId !== "string" || !campaignId) return jsonError("campaignId が必要です");
 
   // Get campaign
-  const { data: campaign, error: campaignError } = await adminClient
+  const { data: campaignRaw, error: campaignError } = await adminClient
     .from("email_campaigns")
-    .select("*")
+    .select("id, subject, body_text, target_role, status")
     .eq("id", campaignId)
     .eq("sent_by", user.id)
     .single();
-  if (campaignError || !campaign) return jsonError("キャンペーンが見つかりません", 404);
+  if (campaignError || !campaignRaw) return jsonError("キャンペーンが見つかりません", 404);
+  const campaign = campaignRaw as Campaign;
   if (campaign.status === "sending") return jsonError("送信中です。しばらくお待ちください");
   if (campaign.status === "done") return jsonError("このキャンペーンは送信済みです");
 

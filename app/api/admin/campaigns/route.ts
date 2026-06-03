@@ -70,8 +70,10 @@ export async function POST(request: Request) {
   const { subject, body_text, target_role } = body as Record<string, unknown>;
   if (typeof subject !== "string" || !subject.trim()) return jsonError("件名を入力してください");
   if (typeof body_text !== "string" || !body_text.trim()) return jsonError("本文を入力してください");
-  if (!["all", "guardian", "child"].includes(target_role as string)) {
-    return jsonError("送信対象が不正です");
+  // Validate against email_campaign_target_role enum values
+  const validTargetRoles = ["all", "guardian", "child"] as const;
+  if (!validTargetRoles.includes(target_role as typeof validTargetRoles[number])) {
+    return jsonError(`target_role が不正です。有効値: ${validTargetRoles.join(" / ")}`);
   }
 
   const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
