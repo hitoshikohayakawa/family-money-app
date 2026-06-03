@@ -1,4 +1,5 @@
 import AppHeader from "@/app/components/app-header";
+import AuthGuard from "@/app/components/auth-guard";
 import FamilyChildGuard from "@/app/components/family-child-guard";
 import FamilyMembersList from "@/app/components/family-members-list";
 import FamilySetup from "@/app/components/family-setup";
@@ -8,6 +9,7 @@ import PageContainer from "@/app/components/ui/page-container";
 export default function FamilyPage() {
   return (
     <>
+      <AuthGuard />
       <FamilyChildGuard />
       <AppHeader />
       <PageContainer

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import AppHeader from "@/app/components/app-header";
+import AuthGuard from "@/app/components/auth-guard";
 import AllowanceGrantsPanel from "@/app/components/allowance-grants-panel";
 import FooterNav from "@/app/components/ui/footer-nav";
 import PageContainer from "@/app/components/ui/page-container";
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function AllowancePage() {
   return (
     <>
+      <AuthGuard />
       <AppHeader />
       <PageContainer>
         {/* Suspense required because AllowanceGrantsPanel uses useSearchParams */}
