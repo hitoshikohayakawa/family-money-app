@@ -105,7 +105,7 @@ export async function DELETE(
 
   const { error: deleteError } = await adminClient
     .from("family_memberships")
-    .update({ status: "inactive" })
+    .update({ status: "disabled" })
     .eq("id", targetMembership.id);
 
   if (deleteError) {
