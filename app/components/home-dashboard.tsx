@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSafeSession } from "@/lib/client-auth";
@@ -911,24 +910,46 @@ export default function HomeDashboard() {
         <div className="flex flex-col gap-5">
 
           {/* 1. Hero */}
-          <section className="relative min-h-[120px] overflow-hidden rounded-[28px] p-6">
-            <Image
-              src="/famimane_head.png"
-              alt=""
-              fill
-              className="object-cover object-right-bottom"
-              priority
-            />
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(236,248,238,0.80)_45%,transparent_78%)]" />
-            <div className="relative z-10">
-              <p className="text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-3xl">
-                おかえりなさい、
-                <br />
-                {greetingName}さん！
-              </p>
-              <p className="mt-2 max-w-xs text-sm leading-6 text-[var(--text-secondary)]">
-                家族みんなでお金のことを楽しく学びましょう
-              </p>
+          <section className="relative overflow-hidden rounded-[28px] bg-[radial-gradient(ellipse_at_top_right,rgba(186,235,210,0.55)_0%,rgba(241,251,244,0.70)_45%,rgba(255,247,232,0.60)_100%)] px-6 py-7">
+            {/* Soft decorative blobs */}
+            <div className="pointer-events-none absolute right-[6rem] top-[-1.5rem] h-28 w-28 rounded-full bg-[rgba(76,163,104,0.10)] blur-2xl sm:right-[8rem] sm:h-36 sm:w-36" />
+            <div className="pointer-events-none absolute bottom-[-1rem] right-[2rem] h-20 w-20 rounded-full bg-[rgba(241,226,174,0.25)] blur-2xl" />
+            {/* Subtle dot pattern */}
+            <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
+              <pattern id="hero-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1.5" fill="#2F8F57" />
+              </pattern>
+              <rect width="100%" height="100%" fill="url(#hero-dots)" />
+            </svg>
+
+            <div className="relative z-10 flex items-center justify-between gap-4">
+              {/* Left: greeting */}
+              <div className="min-w-0">
+                <p className="text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-3xl">
+                  おかえりなさい、
+                  <br />
+                  {greetingName}さん！
+                </p>
+                <p className="mt-2 max-w-xs text-sm leading-6 text-[var(--text-secondary)]">
+                  家族みんなでお金のことを楽しく学びましょう
+                </p>
+              </div>
+
+              {/* Right: user avatar */}
+              <div className="relative shrink-0">
+                {/* Outer mint ring */}
+                <div className="rounded-full p-[3px] ring-2 ring-[rgba(76,163,104,0.25)]">
+                  {/* Inner white ring */}
+                  <div className="rounded-full bg-white p-[3px] shadow-[0_8px_24px_rgba(51,101,63,0.18)]">
+                    <MemberAvatar
+                      avatarPath={ownMember?.avatar_path ?? null}
+                      avatarEmoji={ownMember?.avatar_emoji ?? null}
+                      displayLabel={ownMember?.display_label ?? greetingName}
+                      className="!h-[72px] !w-[72px] rounded-full !text-3xl sm:!h-[112px] sm:!w-[112px] sm:!text-5xl"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
