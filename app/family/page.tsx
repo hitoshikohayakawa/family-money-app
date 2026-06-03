@@ -18,15 +18,6 @@ export default function FamilyPage() {
       >
         <div className="space-y-5">
           <FamilySetup />
-          <div
-            id="name-settings"
-            className="rounded-[28px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] px-5 py-5 shadow-[var(--shadow-card)]"
-          >
-            <p className="text-xl font-extrabold text-[var(--text-primary)]">名前とアカウント</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              親と子どもの表示名はここで編集できます。表示名があると、ホーム画面ではメールアドレスより先に名前が表示されます。
-            </p>
-          </div>
           <FamilyMembersList />
           {/* Spacer for fixed FooterNav */}
           <div className="h-16" />

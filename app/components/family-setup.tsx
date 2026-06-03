@@ -8,9 +8,7 @@ import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import EmptyState from "@/app/components/ui/empty-state";
 import PrimaryButton from "@/app/components/ui/primary-button";
 import SectionCard from "@/app/components/ui/section-card";
-import StatusBadge from "@/app/components/ui/status-badge";
 import TextInput from "@/app/components/ui/text-input";
-import { familyRoleTone, formatFamilyRole } from "@/app/components/ui/family-labels";
 
 type FamilyState = {
   loading: boolean;
@@ -216,43 +214,37 @@ export default function FamilySetup() {
     window.dispatchEvent(new Event(FAMILY_UPDATED_EVENT));
   };
 
-  if (authLoading || state.loading) {
+  // Family already exists: show name only (no card wrapper)
+  if (!authLoading && !state.loading && state.familyName) {
     return (
-      <SectionCard title="家族の準備" description="いまの所属を確認しています。" tone="playful">
-        <p className="text-sm text-[var(--text-secondary)]">読み込み中です。</p>
-      </SectionCard>
+      <div className="rounded-[28px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] px-5 py-4 shadow-[var(--shadow-card)]">
+        <p className="text-xs font-semibold text-[var(--text-muted)]">あなたの家族</p>
+        <p className="mt-1 text-xl font-extrabold text-[var(--text-primary)]">{state.familyName}</p>
+      </div>
     );
   }
 
+  // Loading
+  if (authLoading || state.loading) {
+    return (
+      <div className="rounded-[28px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] px-5 py-4 shadow-[var(--shadow-card)]">
+        <p className="text-sm text-[var(--text-secondary)]">読み込み中です。</p>
+      </div>
+    );
+  }
+
+  // No family yet: show creation form
   return (
     <SectionCard
-      title="家族の準備"
-      description="最初に家族をつくると、みんなを招待できるようになります。"
+      title="家族を作成する"
+      description="家族名を登録して、みんなを招待できるようにしましょう。"
       tone="playful"
     >
-
       {!user ? (
         <EmptyState
           title="まずはログインしましょう"
           description="ログインすると、家族をつくる準備ができます。"
         />
-      ) : state.familyName ? (
-        <div className="grid gap-4 sm:grid-cols-[1.4fr_1fr]">
-          <div className="rounded-[var(--radius-lg)] bg-[var(--surface-card-strong)] px-4 py-4">
-            <p className="text-sm font-semibold text-[var(--text-secondary)]">あなたの家族</p>
-            <p className="mt-2 text-2xl font-bold text-[var(--text-primary)]">
-              {state.familyName}
-            </p>
-          </div>
-          <div className="rounded-[var(--radius-lg)] bg-[var(--surface-accent)] px-4 py-4">
-            <p className="text-sm font-semibold text-[var(--text-secondary)]">あなたの役わり</p>
-            <div className="mt-2">
-              <StatusBadge tone={familyRoleTone(state.role)}>
-                {formatFamilyRole(state.role)}
-              </StatusBadge>
-            </div>
-          </div>
-        </div>
       ) : (
         <form onSubmit={handleCreateFamily} className="mt-4 flex flex-col gap-4">
           <TextInput
@@ -264,7 +256,6 @@ export default function FamilySetup() {
             placeholder="例: こばやかわファミリー"
             required
           />
-
           <PrimaryButton
             type="submit"
             disabled={state.creating || inputFamilyName.trim().length === 0}

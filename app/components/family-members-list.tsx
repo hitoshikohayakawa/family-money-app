@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
@@ -486,6 +487,17 @@ export default function FamilyMembersList() {
             </div>
           </div>
         )}
+
+        {/* Add member button — shown when family exists and user is guardian */}
+        {!state.loading && state.members.length > 0 && canEditChildNames ? (
+          <Link
+            href="/family/invites"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-[22px] border-2 border-dashed border-[rgba(76,163,104,0.35)] bg-[rgba(230,245,234,0.5)] py-4 text-sm font-bold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)] hover:bg-[var(--surface-accent)]"
+          >
+            <span className="text-lg leading-none">＋</span>
+            追加する
+          </Link>
+        ) : null}
       </SectionCard>
 
       {/* Name edit modal */}
