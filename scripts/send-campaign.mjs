@@ -137,51 +137,72 @@ if (campaign.status === "done") {
 console.log(`📧  キャンペーン: ${campaign.subject}`);
 console.log(`   対象: ${campaign.target_role} / ステータス: ${campaign.status}`);
 
-// 2. Build recipients (auto-create tokens via direct query)
-// Ensure tokens exist
-const { data: candidateUsers } = await admin
-  .from("profiles")
-  .select("id")
-  .eq("marketing_email_enabled", true)
-  .not("email", "is", null);
-
-for (const u of candidateUsers ?? []) {
-  await admin.from("email_unsubscribe_tokens").upsert({ user_id: u.id }, { onConflict: "user_id", ignoreDuplicates: true });
-}
-
-// Get filtered recipients
+// 2. Build recipients using separate queries (no cross-table FK join needed)
 const targetRole = campaign.target_role;
-let query = admin
-  .from("profiles")
-  .select(`id, email, email_unsubscribe_tokens(token), family_memberships!inner(role, status)`)
-  .eq("marketing_email_enabled", true)
-  .not("email", "is", null)
-  .eq("family_memberships.status", "active");
+
+// Step 1: Get active family_memberships filtered by role
+let membershipQuery = admin
+  .from("family_memberships")
+  .select("user_id")
+  .eq("status", "active");
 
 if (targetRole === "guardian") {
-  query = query.in("family_memberships.role", ["guardian_admin", "guardian"]);
+  membershipQuery = membershipQuery.in("role", ["guardian_admin", "guardian"]);
 } else if (targetRole === "child") {
-  query = query.eq("family_memberships.role", "child");
+  membershipQuery = membershipQuery.eq("role", "child");
 }
+// targetRole === "all" → no role filter
 
-const { data: rawRecipients, error: recipientsError } = await query;
-if (recipientsError) {
-  console.error("❌  受信者取得に失敗:", recipientsError.message);
+const { data: memberships, error: membershipError } = await membershipQuery;
+if (membershipError) {
+  console.error("❌  メンバー取得に失敗:", membershipError.message);
   process.exit(1);
 }
 
-// Deduplicate by user id
-const seen = new Set();
-const recipients = [];
-for (const r of rawRecipients ?? []) {
-  if (seen.has(r.id)) continue;
-  seen.add(r.id);
-  const token = Array.isArray(r.email_unsubscribe_tokens)
-    ? r.email_unsubscribe_tokens[0]?.token
-    : r.email_unsubscribe_tokens?.token;
-  if (!token) continue;
-  recipients.push({ user_id: r.id, email: r.email, token });
+const eligibleUserIds = [...new Set((memberships ?? []).map(m => m.user_id))];
+if (eligibleUserIds.length === 0) {
+  console.error("❌  対象ロールのアクティブメンバーがいません。");
+  process.exit(1);
 }
+
+// Step 2: Get profiles (marketing_email_enabled = true, email not null)
+const { data: profiles, error: profilesError } = await admin
+  .from("profiles")
+  .select("id, email")
+  .in("id", eligibleUserIds)
+  .eq("marketing_email_enabled", true)
+  .not("email", "is", null);
+
+if (profilesError) {
+  console.error("❌  プロフィール取得に失敗:", profilesError.message);
+  process.exit(1);
+}
+
+// Step 3: Ensure unsubscribe tokens exist for all eligible users
+for (const p of profiles ?? []) {
+  await admin
+    .from("email_unsubscribe_tokens")
+    .upsert({ user_id: p.id }, { onConflict: "user_id", ignoreDuplicates: true });
+}
+
+// Step 4: Fetch tokens
+const profileIds = (profiles ?? []).map(p => p.id);
+const { data: tokens, error: tokenError } = await admin
+  .from("email_unsubscribe_tokens")
+  .select("user_id, token")
+  .in("user_id", profileIds);
+
+if (tokenError) {
+  console.error("❌  トークン取得に失敗:", tokenError.message);
+  process.exit(1);
+}
+
+const tokenMap = Object.fromEntries((tokens ?? []).map(t => [t.user_id, t.token]));
+
+// Build recipients list
+const recipients = (profiles ?? [])
+  .filter(p => tokenMap[p.id])
+  .map(p => ({ user_id: p.id, email: p.email, token: tokenMap[p.id] }));
 
 if (recipients.length === 0) {
   console.error("❌  送信対象ユーザーがいません（全員が配信停止済みの可能性があります）。");
