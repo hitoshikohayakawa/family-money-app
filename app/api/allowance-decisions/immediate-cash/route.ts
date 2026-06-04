@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       const amountFormatted = formatCurrency(grant.amount_jpy);
       await sendNotificationEmail({
         to: [guardianEmail],
-        subject: "【ファミマネ】支払い申請が届きました",
+        subject: "【ミラマネ】支払い申請が届きました",
         text: [
           `${grant.child_display_label}さんから払い出し申請が来ました！`,
           "",
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
           "内容：すぐもらう",
           "",
           `${grant.child_display_label}さんにお金を渡したら、`,
-          "ファミマネで「渡した」ボタンを押してください。",
+          "ミラマネで「渡した」ボタンを押してください。",
           "",
           "また、お金を渡すだけでなく、",
           "どうして今払い出しを行ったのかを話し合ってみてください。",
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
           siteUrl,
           "",
           "家族と学ぶお金学習アプリ",
-          "〜〜 ファミマネ 〜〜",
+          "〜〜 ミラマネ 〜〜",
         ].join("\n"),
         html: buildGuardianPaymentRequestHtml({
           childName: grant.child_display_label,

@@ -7,7 +7,7 @@ import FooterNav from "@/app/components/ui/footer-nav";
 import PageContainer from "@/app/components/ui/page-container";
 
 export const metadata: Metadata = {
-  title: "お小遣い | ファミマネ",
+  title: "お小遣い | ミラマネ",
 };
 
 export default function AllowancePage() {

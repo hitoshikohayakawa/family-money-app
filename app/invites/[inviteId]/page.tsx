@@ -360,7 +360,7 @@ export default function InviteAcceptPage() {
                     家族への参加が完了しました
                   </h2>
                   <p className="text-sm leading-7 text-[var(--text-secondary)]">
-                    これでファミマネを利用できるようになりました。
+                    これでミラマネを利用できるようになりました。
                   </p>
                   <PrimaryButton onClick={() => window.location.assign("/")}>
                     ホームへ移動する

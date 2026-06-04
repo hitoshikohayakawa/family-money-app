@@ -116,7 +116,7 @@ function LoginPageContent() {
           <Link href="/">
             <Image
               src="/assets/lp/logo.png"
-              alt="ファミマネ"
+              alt="ミラマネ"
               width={180}
               height={54}
               className="h-10 w-auto sm:h-12"

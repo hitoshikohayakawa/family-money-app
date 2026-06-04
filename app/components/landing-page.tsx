@@ -100,7 +100,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center gap-3">
             <Image
               src="/assets/lp/logo.png"
-              alt="ファミマネ"
+              alt="ミラマネ"
               width={180}
               height={54}
               className="h-10 w-auto sm:h-12"
@@ -160,7 +160,7 @@ export default function LandingPage() {
                   <div className="relative overflow-hidden rounded-[28px] bg-[#E8F5E9]">
                     <Image
                       src="/assets/lp/hero-family.png"
-                      alt="親子でファミマネを使っているイメージ"
+                      alt="親子でミラマネを使っているイメージ"
                       width={800}
                       height={600}
                       className="h-auto w-full object-cover"
@@ -205,7 +205,7 @@ export default function LandingPage() {
               </blockquote>
               <div className="space-y-4 text-sm leading-8 text-[#516251] sm:text-base">
                 <p>
-                  ファミマネは、親が一方的に教えるのではなく、
+                  ミラマネは、親が一方的に教えるのではなく、
                   <strong className="font-bold text-[#1F2D20]"> 一緒に選んで、一緒に見る </strong>
                   体験を通じて、お金の感覚を育てていくサービスです。
                 </p>
@@ -264,7 +264,7 @@ export default function LandingPage() {
                   サービスに入金しないから、安心して使える
                 </h3>
                 <p className="mt-3 text-sm leading-8 text-[#516251] sm:text-base">
-                  ファミマネは、サービス内にお金を預ける仕組みではありません。子どもから申請が届いたあと、
+                  ミラマネは、サービス内にお金を預ける仕組みではありません。子どもから申請が届いたあと、
                   親が直接お金を渡して完了するので、家庭のペースで安心して使えます。
                 </p>
               </div>
@@ -322,7 +322,7 @@ export default function LandingPage() {
                 <div className="overflow-hidden rounded-[30px] bg-white">
                   <Image
                     src="/assets/lp/app-mockup.png"
-                    alt="ファミマネのアプリ画面モック"
+                    alt="ミラマネのアプリ画面モック"
                     width={540}
                     height={960}
                     className="h-auto w-full object-cover"
@@ -367,7 +367,7 @@ export default function LandingPage() {
           <div>
             <Image
               src="/assets/lp/logo-white.png"
-              alt="ファミマネ"
+              alt="ミラマネ"
               width={220}
               height={64}
               className="h-12 w-auto"
@@ -382,7 +382,7 @@ export default function LandingPage() {
             <p className="leading-7 text-white/75">
               <LegalLinks linkClassName="underline underline-offset-4 transition hover:text-white" />
             </p>
-            <p className="text-white/60">© {new Date().getFullYear()} ファミマネ</p>
+            <p className="text-white/60">© {new Date().getFullYear()} ミラマネ</p>
           </div>
         </div>
       </footer>

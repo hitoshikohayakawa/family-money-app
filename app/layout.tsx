@@ -22,10 +22,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "ファミマネ",
+  title: "ミラマネ",
   description: "家族でたのしくお金を学ぶアプリ",
   openGraph: {
-    title: "ファミマネ",
+    title: "ミラマネ",
     description: "家族でたのしくお金を学ぶアプリ",
     url: siteUrl,
   type: "website",
@@ -34,21 +34,21 @@ export const metadata: Metadata = {
         url: "/famimane_ogp.png?v=3",
         width: 1733,
         height: 907,
-        alt: "ファミマネのOGP画像",
+        alt: "ミラマネのOGP画像",
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ファミマネ",
+    title: "ミラマネ",
     description: "家族でたのしくお金を学ぶアプリ",
     images: [
       {
         url: "/famimane_ogp.png?v=3",
         width: 1733,
         height: 907,
-        alt: "ファミマネのOGP画像",
+        alt: "ミラマネのOGP画像",
       },
     ],
   },

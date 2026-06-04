@@ -3,8 +3,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "利用規約 | ファミマネ",
-  description: "ファミマネの利用規約です。",
+  title: "利用規約 | ミラマネ",
+  description: "ミラマネの利用規約です。",
 };
 
 const lastUpdated = "2026年5月29日";

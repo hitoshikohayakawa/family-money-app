@@ -31,7 +31,7 @@ const serviceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.TEST_SUPABASE_SERVICE_ROLE_KEY;
 const resendApiKey = process.env.RESEND_API_KEY;
 
-const FROM_ADDRESS = "ファミマネ運営 <news@famimane.me>";
+const FROM_ADDRESS = "ミラマネ運営 <news@famimane.me>";
 const APP_URL = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://famimane.me";
 const CONTACT_URL = "https://forms.gle/yWjnWtfwQqf1RX9GA";
 const DAILY_SEND_LIMIT = 90;
@@ -65,7 +65,7 @@ function buildText(bodyText, unsubscribeUrl) {
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-ファミマネ
+ミラマネ
 家族でお金を学ぶアプリ
 
 ${APP_URL}
@@ -85,12 +85,12 @@ function buildHtml(bodyText, unsubscribeUrl) {
   return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"></head>
 <body style="font-family:sans-serif;max-width:600px;margin:40px auto;padding:0 20px;color:#1F2D20">
   <div style="background:#2F8F57;padding:20px 24px;border-radius:12px 12px 0 0">
-    <p style="margin:0;color:#fff;font-size:18px;font-weight:900">ファミマネ</p>
+    <p style="margin:0;color:#fff;font-size:18px;font-weight:900">ミラマネ</p>
     <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:12px">家族でお金を学ぶアプリ</p>
   </div>
   <div style="background:#fff;padding:32px 24px;border:1px solid #E0EDE0;line-height:1.8;font-size:15px">${htmlBody}</div>
   <div style="background:#F4FAF5;padding:20px 24px;border:1px solid #E0EDE0;border-top:none;border-radius:0 0 12px 12px;font-size:12px;color:#516251;line-height:1.8">
-    <strong style="color:#2F8F57">ファミマネ</strong> — <a href="${APP_URL}" style="color:#378C41">${APP_URL}</a><br>
+    <strong style="color:#2F8F57">ミラマネ</strong> — <a href="${APP_URL}" style="color:#378C41">${APP_URL}</a><br>
     お問い合わせ：<a href="${CONTACT_URL}" style="color:#378C41">お問い合わせフォーム</a><br><br>
     <a href="${unsubscribeUrl}" style="color:#999;font-size:11px">メール配信を停止する</a>
   </div>

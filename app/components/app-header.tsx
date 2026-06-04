@@ -105,7 +105,7 @@ export default function AppHeader() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(() => {
     try {
-      const stored = localStorage.getItem("famimane_read_announcements");
+      const stored = localStorage.getItem("miramane_read_announcements");
       if (stored) return new Set(JSON.parse(stored) as string[]);
     } catch { /* ignore */ }
     return new Set();
@@ -351,7 +351,7 @@ export default function AppHeader() {
         >
           <Image
             src="/icon.png"
-            alt="ファミマネ"
+            alt="ミラマネ"
             width={44}
             height={44}
             className="rounded-2xl shadow-[0_10px_24px_rgba(51,101,63,0.14)]"
@@ -359,7 +359,7 @@ export default function AppHeader() {
           />
           <div>
             <p className="text-lg font-black tracking-tight text-[var(--text-primary)]">
-              ファミマネ
+              ミラマネ
             </p>
             <p className="hidden text-xs font-semibold text-[var(--text-secondary)] sm:block">
               家族でお金を学ぶ
@@ -386,7 +386,7 @@ export default function AppHeader() {
                       const next = new Set([...prev, ...ids]);
                       try {
                         localStorage.setItem(
-                          "famimane_read_announcements",
+                          "miramane_read_announcements",
                           JSON.stringify([...next])
                         );
                       } catch { /* ignore */ }

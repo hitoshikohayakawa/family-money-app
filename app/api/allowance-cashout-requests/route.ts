@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       const amountFormatted = formatCurrency(cashoutRequest.requested_amount_jpy);
       await sendNotificationEmail({
         to: [guardianEmail],
-        subject: "【ファミマネ】支払い申請が届きました",
+        subject: "【ミラマネ】支払い申請が届きました",
         text: [
           `${cashoutRequest.child_display_label}さんから払い出し申請が来ました！`,
           "",
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
           "内容：投資したお小遣いの払い出し",
           "",
           `${cashoutRequest.child_display_label}さんにお金を渡したら、`,
-          "ファミマネで「渡した」ボタンを押してください。",
+          "ミラマネで「渡した」ボタンを押してください。",
           "",
           "また、お金を渡すだけでなく、",
           "どうして今払い出しを行ったのかを話し合ってみてください。",
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
           siteUrl,
           "",
           "家族と学ぶお金学習アプリ",
-          "〜〜 ファミマネ 〜〜",
+          "〜〜 ミラマネ 〜〜",
         ].join("\n"),
         html: buildGuardianPaymentRequestHtml({
           childName: cashoutRequest.child_display_label,
@@ -169,7 +169,7 @@ export async function POST(request: Request) {
           family_id: cashoutRequest.family_id,
           notification_type: "cashout_requested",
           recipient_email: guardianEmail,
-          subject: "【ファミマネ】支払い申請が届きました",
+          subject: "【ミラマネ】支払い申請が届きました",
           status: "failed",
           error_message: emailError instanceof Error ? emailError.message : "unknown error",
         });

@@ -3,8 +3,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "プライバシーポリシー | ファミマネ",
-  description: "ファミマネのプライバシーポリシーです。",
+  title: "プライバシーポリシー | ミラマネ",
+  description: "ミラマネのプライバシーポリシーです。",
 };
 
 const lastUpdated = "2026年5月29日";

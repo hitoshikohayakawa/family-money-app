@@ -13,7 +13,7 @@ export function buildCampaignEmailText(
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-ファミマネ
+ミラマネ
 家族でお金を学ぶアプリ
 
 ${APP_URL}
@@ -54,7 +54,7 @@ export function buildCampaignEmailHtml(
         <!-- Header -->
         <tr>
           <td style="background:#2F8F57;padding:24px 32px">
-            <p style="margin:0;color:#fff;font-size:20px;font-weight:900">ファミマネ</p>
+            <p style="margin:0;color:#fff;font-size:20px;font-weight:900">ミラマネ</p>
             <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:12px">家族でお金を学ぶアプリ</p>
           </td>
         </tr>
@@ -68,7 +68,7 @@ export function buildCampaignEmailHtml(
         <tr>
           <td style="padding:24px 32px;background:#F4FAF5;border-top:1px solid #E0EDE0">
             <p style="margin:0;color:#516251;font-size:12px;line-height:1.8">
-              <strong style="color:#2F8F57">ファミマネ</strong> — 家族でお金を学ぶアプリ<br>
+              <strong style="color:#2F8F57">ミラマネ</strong> — 家族でお金を学ぶアプリ<br>
               <a href="${APP_URL}" style="color:#378C41">${APP_URL}</a><br><br>
               お問い合わせ：<a href="${CONTACT_URL}" style="color:#378C41">お問い合わせフォーム</a>
             </p>

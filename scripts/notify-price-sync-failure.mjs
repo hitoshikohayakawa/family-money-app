@@ -1,6 +1,6 @@
 const resendApiKey = process.env.RESEND_API_KEY;
 const notificationEmailFrom =
-  process.env.NOTIFICATION_EMAIL_FROM ?? "ファミマネ <noreply@famimane.app>";
+  process.env.NOTIFICATION_EMAIL_FROM ?? "ミラマネ <noreply@famimane.app>";
 const notificationEmailTo =
   process.env.PRICE_SYNC_ALERT_EMAIL?.trim() || "h.kohayakawa@petsallright.net";
 
@@ -17,7 +17,7 @@ const repository = process.env.GITHUB_REPOSITORY ?? "unknown repository";
 const runId = process.env.GITHUB_RUN_ID ?? "";
 const serverUrl = process.env.GITHUB_SERVER_URL ?? "https://github.com";
 const runUrl = runId ? `${serverUrl}/${repository}/actions/runs/${runId}` : "";
-const subject = `ファミマネ price sync エラー: ${repository}`;
+const subject = `ミラマネ price sync エラー: ${repository}`;
 const text = [
   "価格同期の GitHub Actions が失敗しました。",
   "",

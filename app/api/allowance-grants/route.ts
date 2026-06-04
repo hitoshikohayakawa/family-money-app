@@ -62,7 +62,7 @@ function buildAllowanceGrantedHtml({
   <div style="max-width:480px;margin:0 auto;padding:32px 16px;">
 
     <div style="text-align:center;margin-bottom:28px;">
-      <img src="${logoUrl}" alt="ファミマネ" width="160" style="max-width:160px;height:auto;">
+      <img src="${logoUrl}" alt="ミラマネ" width="160" style="max-width:160px;height:auto;">
     </div>
 
     <div style="background:#ffffff;border-radius:24px;padding:32px 28px;box-shadow:0 4px 20px rgba(0,0,0,0.07);">
@@ -71,7 +71,7 @@ function buildAllowanceGrantedHtml({
         ${escapeHtml(childName)}さん
       </p>
       <p style="font-size:14px;color:#6b7c6b;margin:0 0 24px 0;">
-        ファミマネからのお知らせです
+        ミラマネからのお知らせです
       </p>
 
       <p style="font-size:16px;color:#1a3d1a;line-height:1.7;margin:0 0 24px 0;">
@@ -86,7 +86,7 @@ function buildAllowanceGrantedHtml({
       </div>
 
       <p style="font-size:15px;color:#1a3d1a;line-height:1.9;margin:0 0 12px 0;">
-        さっそくファミマネを開いて<br>
+        さっそくミラマネを開いて<br>
         「今すぐもらう」か「投資（とうし）する」かを選びましょう！
       </p>
       <p style="font-size:13px;color:#8a9d8a;line-height:1.8;margin:0 0 28px 0;">
@@ -96,7 +96,7 @@ function buildAllowanceGrantedHtml({
       <div style="text-align:center;">
         <a href="${escapeHtml(appUrl)}"
            style="display:inline-block;background:#2d7a4f;color:#ffffff;text-decoration:none;padding:14px 44px;border-radius:100px;font-size:15px;font-weight:bold;letter-spacing:0.05em;">
-          ファミマネを開く
+          ミラマネを開く
         </a>
       </div>
 
@@ -104,7 +104,7 @@ function buildAllowanceGrantedHtml({
 
     <div style="text-align:center;padding:24px 0 8px;">
       <p style="font-size:12px;color:#aab8aa;margin:0 0 4px 0;">家族と学ぶお金学習アプリ</p>
-      <p style="font-size:13px;font-weight:bold;color:#9aaa9a;margin:0;">〜〜 ファミマネ 〜〜</p>
+      <p style="font-size:13px;font-weight:bold;color:#9aaa9a;margin:0;">〜〜 ミラマネ 〜〜</p>
     </div>
 
   </div>
@@ -174,7 +174,7 @@ async function handlePost(request: Request) {
     const amountFormatted = formatCurrency(grant.amount_jpy);
     await sendNotificationEmail({
       to: [grant.child_email],
-      subject: "【ファミマネ】お小遣いが届きました",
+      subject: "【ミラマネ】お小遣いが届きました",
       text: [
         `${grant.child_display_label}さん`,
         "",
@@ -184,16 +184,16 @@ async function handlePost(request: Request) {
         `金額：${amountFormatted}`,
         "＝＝＝＝＝＝＝＝",
         "",
-        "さっそくファミマネを開いて",
+        "さっそくミラマネを開いて",
         "「今すぐもらう」か「投資（とうし）する」かを選びましょう！",
         "",
         "どうしたらいいか迷ったときはパパ・ママと相談して決めてみてね！",
         "",
-        `ファミマネはこちらからアクセス`,
+        `ミラマネはこちらからアクセス`,
         siteUrl,
         "",
         "家族と学ぶお金学習アプリ",
-        "〜〜 ファミマネ 〜〜",
+        "〜〜 ミラマネ 〜〜",
       ].join("\n"),
       html: buildAllowanceGrantedHtml({
         childName: grant.child_display_label,
@@ -206,7 +206,7 @@ async function handlePost(request: Request) {
         family_id: grant.family_id,
         notification_type: "allowance_granted",
         recipient_email: grant.child_email,
-        subject: "【ファミマネ】お小遣いが届きました",
+        subject: "【ミラマネ】お小遣いが届きました",
         status: "failed",
         error_message: emailError instanceof Error ? emailError.message : "unknown error",
       });

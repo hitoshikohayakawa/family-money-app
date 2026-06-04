@@ -417,7 +417,7 @@ export default function FamilyInvitesPanel() {
     const inviteUrl = `${window.location.origin}/invites/${inviteId}`;
     const invite = state.invites.find((c) => c.id === inviteId);
     const shareText = [
-      "家族マネーアプリ「ファミマネ」への招待です。",
+      "家族マネーアプリ「ミラマネ」への招待です。",
       "",
       "登録メールアドレス：",
       invite?.email ?? "",
