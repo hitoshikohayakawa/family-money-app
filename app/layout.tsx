@@ -24,6 +24,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "ミラマネ",
   description: "家族でたのしくお金を学ぶアプリ",
+  themeColor: "#4BAF57",
+  appleWebApp: {
+    capable: true,
+    title: "ミラマネ",
+    statusBarStyle: "default",
+  },
   openGraph: {
     title: "ミラマネ",
     description: "家族でたのしくお金を学ぶアプリ",
