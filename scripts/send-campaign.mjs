@@ -79,15 +79,19 @@ ${CONTACT_URL}
 ${unsubscribeUrl}`;
 }
 
-function buildHtml(bodyText, unsubscribeUrl) {
+function buildHtml(bodyText, unsubscribeUrl, imageUrl) {
   const escaped = bodyText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const htmlBody = escaped.split("\n").map(l => l === "" ? "<br>" : `${l}<br>`).join("\n");
+  const imageBlock = imageUrl
+    ? `<div style="line-height:0"><img src="${imageUrl.replace(/"/g, "&quot;")}" alt="ミラマネからのお知らせ" style="display:block;width:100%;max-width:600px;height:auto" /></div>`
+    : "";
   return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"></head>
 <body style="font-family:sans-serif;max-width:600px;margin:40px auto;padding:0 20px;color:#1F2D20">
   <div style="background:#2F8F57;padding:20px 24px;border-radius:12px 12px 0 0">
     <p style="margin:0;color:#fff;font-size:18px;font-weight:900">ミラマネ</p>
     <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:12px">家族でお金を学ぶアプリ</p>
   </div>
+  ${imageBlock}
   <div style="background:#fff;padding:32px 24px;border:1px solid #E0EDE0;line-height:1.8;font-size:15px">${htmlBody}</div>
   <div style="background:#F4FAF5;padding:20px 24px;border:1px solid #E0EDE0;border-top:none;border-radius:0 0 12px 12px;font-size:12px;color:#516251;line-height:1.8">
     <strong style="color:#2F8F57">ミラマネ</strong> — <a href="${APP_URL}" style="color:#378C41">${APP_URL}</a><br>
@@ -136,6 +140,17 @@ if (campaign.status === "done") {
 
 console.log(`📧  キャンペーン: ${campaign.subject}`);
 console.log(`   対象: ${campaign.target_role} / ステータス: ${campaign.status}`);
+
+// image_url が設定されている場合、完全な URL かチェック
+if (campaign.image_url) {
+  if (!campaign.image_url.startsWith("https://") && !campaign.image_url.startsWith("http://")) {
+    console.error(`❌  image_url が完全な URL ではありません: "${campaign.image_url}"`);
+    console.error("   Supabase Studio の Storage でファイルを選択 →「Get URL」で取得した URL を貼り付けてください。");
+    console.error("   例: https://xxxx.supabase.co/storage/v1/object/public/mail-image/filename.png");
+    process.exit(1);
+  }
+  console.log(`   画像: ${campaign.image_url}`);
+}
 
 // 2. Build recipients using separate queries (no cross-table FK join needed)
 const targetRole = campaign.target_role;
@@ -253,7 +268,7 @@ for (const r of recipients) {
         to: [r.email],
         subject: campaign.subject,
         text: buildText(campaign.body_text, unsubscribeUrl),
-        html: buildHtml(campaign.body_text, unsubscribeUrl),
+        html: buildHtml(campaign.body_text, unsubscribeUrl, campaign.image_url),
       }),
     });
 

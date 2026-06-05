@@ -48,7 +48,7 @@ export default function TermsPage() {
             最終更新日：{lastUpdated}
           </p>
           <p className="mt-4 text-sm leading-8 text-[#516251] sm:text-base">
-            本利用規約（以下「本規約」）は、Family Money（以下「本サービス」）の利用条件を定めるものです。利用者は本規約に同意の上、本サービスを利用するものとします。
+            本利用規約（以下「本規約」）は、ミラマネ（以下「本サービス」）の利用条件を定めるものです。利用者は本規約に同意の上、本サービスを利用するものとします。
           </p>
         </div>
 

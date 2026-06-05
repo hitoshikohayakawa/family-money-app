@@ -11,7 +11,7 @@ const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.TEST_SUPABASE_SERVICE_ROLE_KEY;
 const resendApiKey = process.env.RESEND_API_KEY;
 
-const FROM_ADDRESS = "ファミマネ運営 <news@famimane.me>";
+const FROM_ADDRESS = "ミラマネ運営 <news@famimane.me>";
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -34,6 +34,7 @@ type Campaign = {
   body_text: string;
   target_role: CampaignTargetRole;
   status: CampaignStatus;
+  image_url: string | null;
 };
 
 type Recipient = { user_id: string; email: string; unsubscribe_token: string };
@@ -42,7 +43,8 @@ async function sendOneEmail(
   to: string,
   subject: string,
   bodyText: string,
-  unsubscribeUrl: string
+  unsubscribeUrl: string,
+  imageUrl?: string | null
 ): Promise<{ resendId: string | null; error: string | null }> {
   if (!resendApiKey) {
     return { resendId: null, error: "RESEND_API_KEY が未設定です" };
@@ -59,7 +61,7 @@ async function sendOneEmail(
         to: [to],
         subject,
         text: buildCampaignEmailText(bodyText, unsubscribeUrl),
-        html: buildCampaignEmailHtml(bodyText, unsubscribeUrl),
+        html: buildCampaignEmailHtml(bodyText, unsubscribeUrl, imageUrl),
       }),
     });
     if (!res.ok) {
@@ -109,7 +111,7 @@ export async function POST(request: Request) {
   // Get campaign
   const { data: campaignRaw, error: campaignError } = await adminClient
     .from("email_campaigns")
-    .select("id, subject, body_text, target_role, status")
+    .select("id, subject, body_text, target_role, status, image_url")
     .eq("id", campaignId)
     .eq("sent_by", user.id)
     .single();
@@ -174,7 +176,8 @@ export async function POST(request: Request) {
       recipient.email,
       campaign.subject,
       campaign.body_text,
-      unsubscribeUrl
+      unsubscribeUrl,
+      campaign.image_url
     );
 
     const now = new Date().toISOString();

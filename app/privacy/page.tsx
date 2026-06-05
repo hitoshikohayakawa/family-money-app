@@ -48,7 +48,7 @@ export default function PrivacyPage() {
             最終更新日：{lastUpdated}
           </p>
           <p className="mt-4 text-sm leading-8 text-[#516251] sm:text-base">
-            Family Money（以下「当社」）は、本サービスにおける利用者の個人情報を以下のとおり取り扱います。
+            ミラマネ（以下「当社」）は、本サービスにおける利用者の個人情報を以下のとおり取り扱います。
           </p>
         </div>
 
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
           <PolicySection title="8. お問い合わせ">
             <p>お問い合わせ先：</p>
             <p>メールアドレス：h.kohayakawa@petsallright.net</p>
-            <p>運営者：Family Money運営</p>
+            <p>運営者：ミラマネ運営</p>
           </PolicySection>
         </div>
       </div>

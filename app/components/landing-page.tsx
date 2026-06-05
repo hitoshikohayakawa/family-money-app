@@ -159,7 +159,7 @@ export default function LandingPage() {
                 <div className="relative overflow-hidden rounded-[32px] border border-[rgba(75,175,87,0.12)] bg-white p-3 shadow-[0_20px_44px_rgba(75,175,87,0.10)] sm:p-4">
                   <div className="relative overflow-hidden rounded-[28px] bg-[#E8F5E9]">
                     <Image
-                      src="/assets/lp/hero-family.png"
+                      src="/assets/lp/hero-miramane.png"
                       alt="親子でミラマネを使っているイメージ"
                       width={800}
                       height={600}

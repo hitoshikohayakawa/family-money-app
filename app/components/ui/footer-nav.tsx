@@ -41,6 +41,15 @@ function FamilyIcon({ active }: { active: boolean }) {
   );
 }
 
+function NewsIcon({ active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8}>
+      <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+    </svg>
+  );
+}
+
 function SettingsIcon({ active }: { active: boolean }) {
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8}>
@@ -78,6 +87,7 @@ export default function FooterNav() {
   const navItems: NavItem[] = [
     { href: "/", label: "ホーム" },
     { href: "/allowance", label: "お小遣い" },
+    { href: "/news", label: "ニュース", matchPrefix: true },
     ...(isChild
       ? [{ href: "/settings", label: "設定" } as NavItem]
       : [{ href: "/family", label: "家族設定", matchPrefix: true } as NavItem]
@@ -98,6 +108,7 @@ export default function FooterNav() {
             >
               {href === "/" && <HomeIcon active={active} />}
               {href === "/allowance" && <WalletIcon active={active} />}
+              {href === "/news" && <NewsIcon active={active} />}
               {href === "/family" && <FamilyIcon active={active} />}
               {href === "/settings" && <SettingsIcon active={active} />}
               <span>{label}</span>

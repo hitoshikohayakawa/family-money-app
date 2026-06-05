@@ -37,12 +37,22 @@ function escapeHtml(str: string): string {
 
 export function buildCampaignEmailHtml(
   bodyText: string,
-  unsubscribeUrl: string
+  unsubscribeUrl: string,
+  imageUrl?: string | null
 ): string {
   const htmlBody = escapeHtml(bodyText)
     .split("\n")
     .map((line) => (line === "" ? "<br>" : `${line}<br>`))
     .join("\n");
+
+  const imageRow = imageUrl
+    ? `<!-- Image -->
+        <tr>
+          <td style="padding:0;line-height:0">
+            <img src="${escapeHtml(imageUrl)}" alt="ミラマネからのお知らせ" style="display:block;width:100%;max-width:600px;height:auto" />
+          </td>
+        </tr>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -58,6 +68,7 @@ export function buildCampaignEmailHtml(
             <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:12px">家族でお金を学ぶアプリ</p>
           </td>
         </tr>
+        ${imageRow}
         <!-- Body -->
         <tr>
           <td style="padding:32px;color:#1F2D20;font-size:15px;line-height:1.8">
