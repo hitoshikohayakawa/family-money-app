@@ -65,11 +65,12 @@ begin
   end if;
 
   -- アクティブなメンバーシップのみを確認（disabled は再参加を許可）
+  -- テーブルエイリアス fm で status の曖昧さを解消（returns table に status があるため）
   if exists (
     select 1
-    from public.family_memberships
-    where user_id = current_user_id
-      and status = 'active'
+    from public.family_memberships fm
+    where fm.user_id = current_user_id
+      and fm.status = 'active'
   ) then
     raise exception 'User already belongs to a family';
   end if;
