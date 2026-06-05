@@ -9,6 +9,7 @@ import MemberAvatar from "@/app/components/ui/member-avatar";
 import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
+import { AutoHiragana } from "@/app/components/auto-hiragana";
 import EmptyState from "@/app/components/ui/empty-state";
 import PrimaryButton from "@/app/components/ui/primary-button";
 import SecondaryButton from "@/app/components/ui/secondary-button";
@@ -145,8 +146,6 @@ type InvestmentCategory = {
   code: InvestmentCategoryCode;
   name: string;
   description: string;
-  elementaryName: string;
-  elementaryDescription: string;
 };
 
 const investmentCategories: InvestmentCategory[] = [
@@ -155,36 +154,24 @@ const investmentCategories: InvestmentCategory[] = [
     name: "インデックス株式",
     description:
       "世界のいろいろな会社に広く分けて投資するジャンルです。1つにしぼらず、まとめて応援するイメージです。",
-    elementaryName: "インデックスかぶしき",
-    elementaryDescription:
-      "せかいの いろいろな かいしゃに ひろく わけて とうしする ジャンルです。ひとつに しぼらず、まとめて おうえんする イメージです。",
   },
   {
     code: "single_stock",
     name: "個別株式",
     description:
       "会社の価値を応援するように、その会社そのものへ投資するジャンルです。会社ごとの良し悪しが出やすいです。",
-    elementaryName: "こべつかぶしき",
-    elementaryDescription:
-      "ひとつの かいしゃ そのものに とうしする ジャンルです。かいしゃごとに よしあしが でやすいです。",
   },
   {
     code: "resource",
     name: "現物・資源",
     description:
       "金や銀などの現物資産や、資源に関係するジャンルです。世界の出来事や景気で動きやすい特徴があります。",
-    elementaryName: "げんぶつ・しげん",
-    elementaryDescription:
-      "きんや ぎんなどの げんぶつしさんや、しげんに かんけいする ジャンルです。せかいのできごとで うごきやすい とくちょうが あります。",
   },
   {
     code: "crypto",
     name: "仮想通貨",
     description:
       "インターネット上でやりとりされるデジタル資産のジャンルです。値動きが大きい特徴があります。",
-    elementaryName: "かそうつうか",
-    elementaryDescription:
-      "ネットの うえで やりとりされる デジタルの しさんです。ねだんの うごきが おおきい とくちょうが あります。",
   },
 ];
 
@@ -277,9 +264,9 @@ function formatSignedPercent(rate: number | string) {
   return `${numericRate >= 0 ? "+" : "-"}${formatGainRate(Math.abs(numericRate))}%`;
 }
 
-function formatAssetDailyChange(asset: InvestmentAssetOption, elementaryMode = false) {
+function formatAssetDailyChange(asset: InvestmentAssetOption) {
   if (asset.daily_change_jpy === null || asset.daily_change_rate === null) {
-    return elementaryMode ? "きのうとの ちがいは まだありません" : "前日比なし";
+    return "前日比なし";
   }
 
   const sign = asset.daily_change_jpy >= 0 ? "+" : "";
@@ -414,10 +401,21 @@ function PaginationControls({
 function RubyText({
   tokens,
   className = "",
+  elementaryMode = false,
 }: {
   tokens: RubyToken[];
   className?: string;
+  elementaryMode?: boolean;
 }) {
+  if (elementaryMode) {
+    const fullText = tokens.map((t) => t.text).join("");
+    return (
+      <span className={className}>
+        <AutoHiragana enabled>{fullText}</AutoHiragana>
+      </span>
+    );
+  }
+
   return (
     <span className={className}>
       {tokens.map((token, index) =>
@@ -539,7 +537,7 @@ function ChildSectionTitle({
 }: {
   icon: ReactNode;
   title: ReactNode;
-  description: string;
+  description: ReactNode;
   tone?: "default" | "success" | "warning";
 }) {
   return (
@@ -632,12 +630,14 @@ function ChoiceModal({
   footer,
   contentClassName = "",
   onClose,
+  elementaryMode = false,
 }: {
   title: RubyToken[];
   children: ReactNode;
   footer?: ReactNode;
   contentClassName?: string;
   onClose: () => void;
+  elementaryMode?: boolean;
 }) {
   return (
     <div
@@ -648,7 +648,7 @@ function ChoiceModal({
       <div className="flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-[32px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] p-4 shadow-[0_24px_70px_rgba(26,44,82,0.28)] sm:p-5">
         <div className="flex items-start justify-between gap-4">
           <h3 className="text-xl font-bold leading-9 text-[var(--text-primary)]">
-            <RubyText tokens={title} />
+            <RubyText tokens={title} elementaryMode={elementaryMode} />
           </h3>
           <button
             type="button"
@@ -671,22 +671,14 @@ function ChoiceModal({
   );
 }
 
-function immediateCashTitle(elementaryMode: boolean): RubyToken[] {
-  if (elementaryMode) {
-    return [{ text: "いますぐ もらいますか？" }];
-  }
-
+function immediateCashTitle(): RubyToken[] {
   return [
     { text: "今", reading: "いま" },
     { text: "すぐもらうでよろしいですか？" },
   ];
 }
 
-function investmentSelectTitle(elementaryMode: boolean): RubyToken[] {
-  if (elementaryMode) {
-    return [{ text: "とうしの ジャンルを えらんでください。" }];
-  }
-
+function investmentSelectTitle(): RubyToken[] {
   return [
     { text: "投資", reading: "とうし" },
     { text: "ジャンルを" },
@@ -695,11 +687,7 @@ function investmentSelectTitle(elementaryMode: boolean): RubyToken[] {
   ];
 }
 
-function investmentAssetSelectTitle(elementaryMode: boolean): RubyToken[] {
-  if (elementaryMode) {
-    return [{ text: "とうしさきを えらんでください。" }];
-  }
-
+function investmentAssetSelectTitle(): RubyToken[] {
   return [
     { text: "投資先", reading: "とうしさき" },
     { text: "を" },
@@ -708,11 +696,7 @@ function investmentAssetSelectTitle(elementaryMode: boolean): RubyToken[] {
   ];
 }
 
-function investmentConfirmTitle(assetName: string, elementaryMode: boolean): RubyToken[] {
-  if (elementaryMode) {
-    return [{ text: `${assetName}に とうしします。よろしいですか？` }];
-  }
-
+function investmentConfirmTitle(assetName: string): RubyToken[] {
   return [
     { text: assetName },
     { text: "に" },
@@ -1653,7 +1637,7 @@ export default function AllowanceGrantsPanel({
   return (
     <>
       <SectionCard
-        title={isElementaryChildMode ? "おこづかい" : "お小遣い"}
+        title={<AutoHiragana enabled={isElementaryChildMode}>お小遣い</AutoHiragana>}
         description={isChild ? undefined : "親が子どもへお小遣いを渡し、子どもはあとで受け取り方を選べます。"}
       >
       {state.loading ? (
@@ -2167,7 +2151,7 @@ export default function AllowanceGrantsPanel({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold tracking-[0.04em] text-[var(--text-secondary)]">
-                      {isElementaryChildMode ? "いまの おこづかい" : "いまのお小遣い"}
+                      <AutoHiragana enabled={isElementaryChildMode}>いまのお小遣い</AutoHiragana>
                     </p>
                     <p className="mt-2 text-[2.6rem] font-black leading-none text-[var(--text-primary)] sm:text-[3.2rem]">
                       {formatCurrency(totalMarketValue)}
@@ -2190,12 +2174,8 @@ export default function AllowanceGrantsPanel({
 
               {childPendingGrants.length === 0 && childInvestedGrants.length === 0 ? (
                 <EmptyState
-                  title={isElementaryChildMode ? "まだ おこづかいが ありません" : "まだお小遣いがありません"}
-                  description={
-                    isElementaryChildMode
-                      ? "おやから おこづかいが とどくと、ここに でます。"
-                      : "親からお小遣いが届くと、ここに表示されます。"
-                  }
+                  title={<AutoHiragana enabled={isElementaryChildMode}>まだお小遣いがありません</AutoHiragana>}
+                  description={<AutoHiragana enabled={isElementaryChildMode}>親からお小遣いが届くと、ここに表示されます。</AutoHiragana>}
                 />
               ) : null}
 
@@ -2211,13 +2191,13 @@ export default function AllowanceGrantsPanel({
                           <path d="M12 16h.01" />
                         </svg>
                       }
-                      title={
-                        isElementaryChildMode ? "まだ やっていないこと" : "まだやっていないこと"
-                      }
+                      title={<AutoHiragana enabled={isElementaryChildMode}>まだやっていないこと</AutoHiragana>}
                       description={
-                        isElementaryChildMode
-                          ? `まだ やることを きめていない おこづかいが ${pendingCount}けん あります。`
-                          : `まだやることを決めていないお小遣いが${pendingCount}件あります。`
+                        <>
+                          <AutoHiragana enabled={isElementaryChildMode}>まだやることを決めていないお小遣いが</AutoHiragana>
+                          {pendingCount}
+                          <AutoHiragana enabled={isElementaryChildMode}>件あります。</AutoHiragana>
+                        </>
                       }
                     />
                   </div>
@@ -2238,7 +2218,7 @@ export default function AllowanceGrantsPanel({
                               </div>
                               <div>
                               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                                {isElementaryChildMode ? "おこづかい" : "お小遣い"}
+                                <AutoHiragana enabled={isElementaryChildMode}>お小遣い</AutoHiragana>
                               </p>
                               <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
                                 {formatCurrency(grant.amount_jpy)}
@@ -2247,7 +2227,7 @@ export default function AllowanceGrantsPanel({
                             </div>
                             <div className="text-right">
                               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                                {isElementaryChildMode ? "もらった ひ" : "付与日"}
+                                <AutoHiragana enabled={isElementaryChildMode}>付与日</AutoHiragana>
                               </p>
                               <p className="mt-1 text-sm font-bold text-[var(--text-primary)]">
                                 {formatGrantDateLabel(grant.granted_at)}
@@ -2273,7 +2253,7 @@ export default function AllowanceGrantsPanel({
                               }
                             >
                               {state.requestingCashGrantId === grant.id ? (
-                                isElementaryChildMode ? "えらんでいます..." : "選択中..."
+                                <AutoHiragana enabled={isElementaryChildMode}>選択中...</AutoHiragana>
                                 ) : (
                                   <RubyText
                                     tokens={[
@@ -2298,17 +2278,14 @@ export default function AllowanceGrantsPanel({
                               }
                             >
                               {state.requestingInvestmentGrantId === grant.id ? (
-                                isElementaryChildMode ? "えらんでいます..." : "選択中..."
+                                <AutoHiragana enabled={isElementaryChildMode}>選択中...</AutoHiragana>
                               ) : (
                                 <RubyText
-                                  tokens={
-                                    isElementaryChildMode
-                                      ? [{ text: "とうしする" }]
-                                      : [
-                                          { text: "投資", reading: "とうし" },
-                                          { text: "する" },
-                                        ]
-                                  }
+                                  tokens={[
+                                    { text: "投資", reading: "とうし" },
+                                    { text: "する" },
+                                  ]}
+                                  elementaryMode={isElementaryChildMode}
                                 />
                               )}
                             </SecondaryButton>
@@ -2330,16 +2307,12 @@ export default function AllowanceGrantsPanel({
                         <path d="m13 5 7 7-7 7" />
                       </svg>
                     }
-                    title={isElementaryChildMode ? "ひきだす とうしを えらぶ" : "引き出す投資を選ぶ"}
-                    description={
-                      isElementaryChildMode
-                        ? "チェックした とうしぶんを、おやへ うけとりの おねがいに できます。"
-                        : "チェックした投資分を、親へ受け取り申請できます。"
-                    }
+                    title={<AutoHiragana enabled={isElementaryChildMode}>引き出す投資を選ぶ</AutoHiragana>}
+                    description={<AutoHiragana enabled={isElementaryChildMode}>チェックした投資分を、親へ受け取り申請できます。</AutoHiragana>}
                   />
                   <div className="rounded-[20px] bg-white/80 px-4 py-3 sm:min-w-[220px]">
                     <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                      {isElementaryChildMode ? "えらんでいる きんがく" : "選択中の金額"}
+                      <AutoHiragana enabled={isElementaryChildMode}>選択中の金額</AutoHiragana>
                     </p>
                     <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
                       {formatCurrency(selectedCashoutTotal)}
@@ -2355,12 +2328,8 @@ export default function AllowanceGrantsPanel({
                     disabled={state.requestingCashout || selectedCashoutGrantIds.length === 0}
                   >
                     {state.requestingCashout
-                      ? isElementaryChildMode
-                        ? "おねがい中..."
-                        : "申請中..."
-                      : isElementaryChildMode
-                        ? "えらんだ ものを ひきだす"
-                        : "チェックしたものを引き出す"}
+                      ? <AutoHiragana enabled={isElementaryChildMode}>申請中...</AutoHiragana>
+                      : <AutoHiragana enabled={isElementaryChildMode}>チェックしたものを引き出す</AutoHiragana>}
                   </PrimaryButton>
                 </div>
               </div>
@@ -2377,22 +2346,15 @@ export default function AllowanceGrantsPanel({
                     }
                     title={
                       <RubyText
-                        tokens={
-                          isElementaryChildMode
-                            ? [{ text: "とうししているもの" }]
-                            : [
-                                { text: "投資", reading: "とうし" },
-                                { text: "中", reading: "ちゅう" },
-                                { text: "のもの" },
-                              ]
-                        }
+                        tokens={[
+                          { text: "投資", reading: "とうし" },
+                          { text: "中", reading: "ちゅう" },
+                          { text: "のもの" },
+                        ]}
+                        elementaryMode={isElementaryChildMode}
                       />
                     }
-                    description={
-                      isElementaryChildMode
-                        ? "いま とうしを しているもの いちらんです"
-                        : "いま投資をしているもの一覧です"
-                    }
+                    description={<AutoHiragana enabled={isElementaryChildMode}>いま投資をしているもの一覧です</AutoHiragana>}
                   />
                   <div className="grid gap-3">
                     {childInvestedGrants.map((grant) => (
@@ -2423,11 +2385,7 @@ export default function AllowanceGrantsPanel({
                                         className="h-6 w-6 rounded-md border border-[var(--border-soft)] accent-[var(--brand-blue)]"
                                         checked={selectedCashoutGrantIds.includes(grant.id)}
                                         onChange={() => toggleCashoutGrant(grant.id)}
-                                        aria-label={
-                                          isElementaryChildMode
-                                            ? "この とうしを ひきだすものに いれる"
-                                            : "この投資を引き出す候補に入れる"
-                                        }
+                                        aria-label="この投資を引き出す候補に入れる"
                                       />
                                     </label>
                                   ) : (
@@ -2443,20 +2401,20 @@ export default function AllowanceGrantsPanel({
                                             {grant.decision_asset_name ?? "投資先"}
                                           </p>
                                           <p className="mt-0.5 text-[0.75rem] text-[var(--text-muted)]">
-                                            {isElementaryChildMode ? "くれたひと" : "くれたひと"}：{grant.granted_by_display_label}
+                                            くれたひと：{grant.granted_by_display_label}
                                           </p>
                                         </div>
                                       </div>
 
                                       <div className="mt-3 grid grid-cols-[auto_1fr] items-end gap-x-4 gap-y-2 rounded-[18px] bg-[rgba(244,251,245,0.72)] px-3 py-3">
                                         <p className="text-[0.78rem] font-semibold text-[var(--text-secondary)]">
-                                          {isElementaryChildMode ? "いまの きんがく" : "現在の価格"}
+                                          <AutoHiragana enabled={isElementaryChildMode}>現在の価格</AutoHiragana>
                                         </p>
                                         <p className="text-right text-[2rem] font-black leading-none text-[var(--text-primary)]">
                                           {formatCurrency(currentValue)}
                                         </p>
                                         <p className="text-[0.78rem] font-semibold text-[var(--text-secondary)]">
-                                          {isElementaryChildMode ? "ふえた・へった" : "増減金額"}
+                                          <AutoHiragana enabled={isElementaryChildMode}>増減金額</AutoHiragana>
                                         </p>
                                         <p className={`text-right text-base font-black ${gainTone}`}>
                                           {grant.unrealized_gain_jpy !== null
@@ -2476,12 +2434,8 @@ export default function AllowanceGrantsPanel({
                                       >
                                         <span>
                                           {isExpanded
-                                            ? isElementaryChildMode
-                                              ? "くわしい じょうほうを とじる"
-                                              : "詳細を閉じる"
-                                            : isElementaryChildMode
-                                              ? "くわしい じょうほうを みる"
-                                              : "詳細を見る"}
+                                            ? <AutoHiragana enabled={isElementaryChildMode}>詳細を閉じる</AutoHiragana>
+                                            : <AutoHiragana enabled={isElementaryChildMode}>詳細を見る</AutoHiragana>}
                                         </span>
                                         <span className="text-base">{isExpanded ? "▲" : "▼"}</span>
                                       </button>
@@ -2492,7 +2446,7 @@ export default function AllowanceGrantsPanel({
                                         {grant.note ? (
                                           <div className="rounded-[14px] bg-white/70 px-3 py-3">
                                             <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                              {isElementaryChildMode ? "メモ" : "投資説明"}
+                                              <AutoHiragana enabled={isElementaryChildMode}>投資説明</AutoHiragana>
                                             </p>
                                             <p className="mt-1 leading-6 text-[var(--text-primary)]">
                                               {grant.note}
@@ -2503,16 +2457,12 @@ export default function AllowanceGrantsPanel({
                                         <div className="grid gap-3 lg:grid-cols-2">
                                           <div className="rounded-[16px] bg-white/75 px-3 py-3">
                                             <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                              {isElementaryChildMode
-                                                ? "ねだんの くわしい ようす"
-                                                : "価格推移の詳細"}
+                                              <AutoHiragana enabled={isElementaryChildMode}>価格推移の詳細</AutoHiragana>
                                             </p>
                                             <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                               <div>
                                                 <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  {isElementaryChildMode
-                                                    ? "もらった ひ"
-                                                    : "もらった年月日"}
+                                                  <AutoHiragana enabled={isElementaryChildMode}>もらった年月日</AutoHiragana>
                                                 </p>
                                                 <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
                                                   {formatGrantDateLabel(grant.granted_at)}
@@ -2520,9 +2470,7 @@ export default function AllowanceGrantsPanel({
                                               </div>
                                               <div>
                                                 <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  {isElementaryChildMode
-                                                    ? "はじめの ねだん"
-                                                    : "取得した日の価格"}
+                                                  <AutoHiragana enabled={isElementaryChildMode}>取得した日の価格</AutoHiragana>
                                                 </p>
                                                 <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
                                                   {grant.investment_unit_price_jpy !== null
@@ -2537,7 +2485,7 @@ export default function AllowanceGrantsPanel({
                                               </div>
                                               <div>
                                                 <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  {isElementaryChildMode ? "いまの ねだん" : "現在の価格"}
+                                                  <AutoHiragana enabled={isElementaryChildMode}>現在の価格</AutoHiragana>
                                                 </p>
                                                 <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
                                                   {grant.latest_unit_price_jpy !== null
@@ -2555,16 +2503,12 @@ export default function AllowanceGrantsPanel({
 
                                           <div className="rounded-[16px] bg-white/75 px-3 py-3">
                                             <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                              {isElementaryChildMode
-                                                ? "あなたのおかねの くわしい ようす"
-                                                : "投資額の詳細"}
+                                              <AutoHiragana enabled={isElementaryChildMode}>投資額の詳細</AutoHiragana>
                                             </p>
                                             <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                               <div>
                                                 <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  {isElementaryChildMode
-                                                    ? "いれた おかね"
-                                                    : "入れた金額"}
+                                                  <AutoHiragana enabled={isElementaryChildMode}>入れた金額</AutoHiragana>
                                                 </p>
                                                 <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
                                                   {formatCurrency(grant.amount_jpy)}
@@ -2572,9 +2516,7 @@ export default function AllowanceGrantsPanel({
                                               </div>
                                               <div>
                                                 <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  {isElementaryChildMode
-                                                    ? "いまの ねだん"
-                                                    : "現在の評価額"}
+                                                  <AutoHiragana enabled={isElementaryChildMode}>現在の評価額</AutoHiragana>
                                                 </p>
                                                 <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
                                                   {formatCurrency(currentValue)}
@@ -2586,16 +2528,12 @@ export default function AllowanceGrantsPanel({
 
                                         <div className="rounded-[16px] border border-[rgba(84,130,95,0.12)] bg-white/70 px-3 py-3">
                                           <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                            {isElementaryChildMode
-                                              ? "ほそく じょうほう"
-                                              : "その他の補足情報"}
+                                            <AutoHiragana enabled={isElementaryChildMode}>その他の補足情報</AutoHiragana>
                                           </p>
                                           <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                             <div>
                                               <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                {isElementaryChildMode
-                                                  ? "さくせいした ひと"
-                                                  : "作成者"}
+                                                <AutoHiragana enabled={isElementaryChildMode}>作成者</AutoHiragana>
                                               </p>
                                               <p className="mt-1 font-semibold text-[var(--text-primary)]">
                                                 {grant.granted_by_display_label}
@@ -2603,14 +2541,10 @@ export default function AllowanceGrantsPanel({
                                             </div>
                                             <div>
                                               <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                {isElementaryChildMode
-                                                  ? "けいさんの もと"
-                                                  : "評価額の計算"}
+                                                <AutoHiragana enabled={isElementaryChildMode}>評価額の計算</AutoHiragana>
                                               </p>
                                               <p className="mt-1 font-semibold text-[var(--text-primary)]">
-                                                {isElementaryChildMode
-                                                  ? "いちばん あたらしい ねだんを つかっています"
-                                                  : "最新価格を使って計算しています"}
+                                                <AutoHiragana enabled={isElementaryChildMode}>最新価格を使って計算しています</AutoHiragana>
                                               </p>
                                             </div>
                                           </div>
@@ -2633,12 +2567,8 @@ export default function AllowanceGrantsPanel({
 
           {viewMode === "history" && isChild && historyGrants.length === 0 ? (
             <EmptyState
-              title={isElementaryChildMode ? "まだ うけとりきろくが ありません" : "まだ受け取り履歴がありません"}
-              description={
-                isElementaryChildMode
-                  ? "とうしの ひきだしや うけとりが おわると、ここに でます。"
-                  : "投資の引き出し申請や受け取りが完了すると、ここに履歴が表示されます。"
-              }
+              title={<AutoHiragana enabled={isElementaryChildMode}>まだ受け取り履歴がありません</AutoHiragana>}
+              description={<AutoHiragana enabled={isElementaryChildMode}>投資の引き出し申請や受け取りが完了すると、ここに履歴が表示されます。</AutoHiragana>}
             />
           ) : null}
 
@@ -2648,12 +2578,10 @@ export default function AllowanceGrantsPanel({
               className="rounded-[28px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.68)] p-4"
             >
               <p className="text-lg font-bold text-[var(--text-primary)]">
-                {isElementaryChildMode ? "これまでの うけとりきろく" : "過去の受け取り履歴"}
+                <AutoHiragana enabled={isElementaryChildMode}>過去の受け取り履歴</AutoHiragana>
               </p>
               <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                {isElementaryChildMode
-                  ? "しんせいしたものや、うけとったものを ここで みられます。"
-                  : "申請したもの、受け取り済みになったものをここで見られます。"}
+                <AutoHiragana enabled={isElementaryChildMode}>申請したもの、受け取り済みになったものをここで見られます。</AutoHiragana>
               </p>
               <div className="mt-4 grid gap-3">
                 {historyPagination.items.map((grant) => (
@@ -2665,10 +2593,8 @@ export default function AllowanceGrantsPanel({
                       <div>
                         <p className="text-sm font-semibold text-[var(--text-secondary)]">
                           {grant.decision_asset_name
-                            ? `${isElementaryChildMode ? "とうし" : "投資"}: ${grant.decision_asset_name}`
-                            : isElementaryChildMode
-                              ? "すぐもらう"
-                              : "すぐにもらう"}
+                            ? <><AutoHiragana enabled={isElementaryChildMode}>投資</AutoHiragana>: {grant.decision_asset_name}</>
+                            : <AutoHiragana enabled={isElementaryChildMode}>すぐにもらう</AutoHiragana>}
                         </p>
                         <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
                           {formatCurrency(
@@ -2678,12 +2604,8 @@ export default function AllowanceGrantsPanel({
                       </div>
                       <StatusBadge tone={grant.cashout_status === "paid" ? "success" : "warning"}>
                         {grant.cashout_status === "paid"
-                          ? isElementaryChildMode
-                            ? "うけとった"
-                            : "受け取り済み"
-                          : isElementaryChildMode
-                            ? "おねがい中"
-                            : "申請中"}
+                          ? <AutoHiragana enabled={isElementaryChildMode}>受け取り済み</AutoHiragana>
+                          : <AutoHiragana enabled={isElementaryChildMode}>申請中</AutoHiragana>}
                       </StatusBadge>
                     </div>
                   </div>
@@ -2873,13 +2795,13 @@ export default function AllowanceGrantsPanel({
               </svg>
             </div>
             <h2 className="mt-4 text-xl font-bold text-[var(--text-primary)]">
-              {isElementaryChildMode ? "ひきだし しんせいを しました" : "引き出し申請をしました"}
+              <AutoHiragana enabled={isElementaryChildMode}>引き出し申請をしました</AutoHiragana>
             </h2>
             <div className="mt-3 rounded-[20px] bg-[var(--surface-soft)] px-4 py-3">
               <p className="text-sm leading-6 text-[var(--text-secondary)]">
-                {isElementaryChildMode
-                  ? `つうちは いっていますが、まずは ${pendingChoice.guardianNames.join("・")} さんに しんせいしたことを つたえましょう。`
-                  : `通知は行っていますが、まずは ${pendingChoice.guardianNames.join("・")} さんに申請したことを伝えましょう。`}
+                <AutoHiragana enabled={isElementaryChildMode}>通知は行っていますが、まずは</AutoHiragana>
+                {` ${pendingChoice.guardianNames.join("・")} `}
+                <AutoHiragana enabled={isElementaryChildMode}>さんに申請したことを伝えましょう。</AutoHiragana>
               </p>
             </div>
             <div className="mt-5">
@@ -2948,28 +2870,26 @@ export default function AllowanceGrantsPanel({
 
       {pendingChoice?.type === "immediate_cash" ? (
         <ChoiceModal
-          title={immediateCashTitle(isElementaryChildMode)}
+          title={immediateCashTitle()}
+          elementaryMode={isElementaryChildMode}
           onClose={() => setPendingChoice(null)}
         >
           <div className="space-y-4">
             <p className="text-sm leading-7 text-[var(--text-secondary)]">
-              {isElementaryChildMode ? (
-                "この おこづかいを いますぐ もらうことに します。"
-              ) : (
-                <RubyText
-                  tokens={[
-                    { text: "このお" },
-                    { text: "小遣", reading: "こづか" },
-                    { text: "いを" },
-                    { text: "今", reading: "いま" },
-                    { text: "すぐもらう" },
-                    { text: "方法", reading: "ほうほう" },
-                    { text: "で" },
-                    { text: "決", reading: "き" },
-                    { text: "めます。" },
-                  ]}
-                />
-              )}
+              <RubyText
+                tokens={[
+                  { text: "このお" },
+                  { text: "小遣", reading: "こづか" },
+                  { text: "いを" },
+                  { text: "今", reading: "いま" },
+                  { text: "すぐもらう" },
+                  { text: "方法", reading: "ほうほう" },
+                  { text: "で" },
+                  { text: "決", reading: "き" },
+                  { text: "めます。" },
+                ]}
+                elementaryMode={isElementaryChildMode}
+              />
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <PrimaryButton
@@ -2993,7 +2913,8 @@ export default function AllowanceGrantsPanel({
 
       {pendingChoice?.type === "investment_category_select" ? (
         <ChoiceModal
-          title={investmentSelectTitle(isElementaryChildMode)}
+          title={investmentSelectTitle()}
+          elementaryMode={isElementaryChildMode}
           footer={
             <div className="grid gap-2 sm:grid-cols-2">
               <PrimaryButton
@@ -3012,16 +2933,13 @@ export default function AllowanceGrantsPanel({
                 }}
               >
                 <RubyText
-                  tokens={
-                    isElementaryChildMode
-                      ? [{ text: "この ジャンルを みる" }]
-                      : [
-                          { text: "この" },
-                          { text: "ジャンルを" },
-                          { text: "見", reading: "み" },
-                          { text: "る" },
-                        ]
-                  }
+                  tokens={[
+                    { text: "この" },
+                    { text: "ジャンルを" },
+                    { text: "見", reading: "み" },
+                    { text: "る" },
+                  ]}
+                  elementaryMode={isElementaryChildMode}
                 />
               </PrimaryButton>
               <SecondaryButton type="button" onClick={() => setPendingChoice(null)}>
@@ -3053,12 +2971,10 @@ export default function AllowanceGrantsPanel({
                     }
                   >
                     <p className="font-bold text-[var(--text-primary)]">
-                      {isElementaryChildMode ? category.elementaryName : category.name}
+                      <AutoHiragana enabled={isElementaryChildMode}>{category.name}</AutoHiragana>
                     </p>
                     <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                      {isElementaryChildMode
-                        ? category.elementaryDescription
-                        : category.description}
+                      <AutoHiragana enabled={isElementaryChildMode}>{category.description}</AutoHiragana>
                     </p>
                   </button>
                 );
@@ -3070,7 +2986,8 @@ export default function AllowanceGrantsPanel({
 
       {pendingChoice?.type === "investment_select" ? (
         <ChoiceModal
-          title={investmentAssetSelectTitle(isElementaryChildMode)}
+          title={investmentAssetSelectTitle()}
+          elementaryMode={isElementaryChildMode}
           footer={
             <div className="grid gap-2 sm:grid-cols-2">
               <PrimaryButton
@@ -3090,17 +3007,14 @@ export default function AllowanceGrantsPanel({
                 }}
               >
                 <RubyText
-                  tokens={
-                    isElementaryChildMode
-                      ? [{ text: "この とうしさきを えらぶ" }]
-                      : [
-                          { text: "この" },
-                          { text: "投資先", reading: "とうしさき" },
-                          { text: "を" },
-                          { text: "選", reading: "えら" },
-                          { text: "ぶ" },
-                        ]
-                  }
+                  tokens={[
+                    { text: "この" },
+                    { text: "投資先", reading: "とうしさき" },
+                    { text: "を" },
+                    { text: "選", reading: "えら" },
+                    { text: "ぶ" },
+                  ]}
+                  elementaryMode={isElementaryChildMode}
                 />
               </PrimaryButton>
               <SecondaryButton
@@ -3122,14 +3036,10 @@ export default function AllowanceGrantsPanel({
             {selectedInvestmentCategory ? (
               <div className="rounded-[20px] bg-[rgba(76,163,104,0.12)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                 <p className="font-bold text-[var(--text-primary)]">
-                  {isElementaryChildMode
-                    ? selectedInvestmentCategory.elementaryName
-                    : selectedInvestmentCategory.name}
+                  <AutoHiragana enabled={isElementaryChildMode}>{selectedInvestmentCategory.name}</AutoHiragana>
                 </p>
                 <p className="mt-1 leading-6">
-                  {isElementaryChildMode
-                    ? selectedInvestmentCategory.elementaryDescription
-                    : selectedInvestmentCategory.description}
+                  <AutoHiragana enabled={isElementaryChildMode}>{selectedInvestmentCategory.description}</AutoHiragana>
                 </p>
               </div>
             ) : null}
@@ -3162,15 +3072,12 @@ export default function AllowanceGrantsPanel({
                     <div className="mt-2 grid gap-2 text-sm text-[var(--text-secondary)] sm:grid-cols-3">
                       <p>
                         <RubyText
-                          tokens={
-                            isElementaryChildMode
-                              ? [{ text: "いまの ねだん" }]
-                              : [
-                                  { text: "今", reading: "いま" },
-                                  { text: "の" },
-                                  { text: "価格", reading: "かかく" },
-                                ]
-                          }
+                          tokens={[
+                            { text: "今", reading: "いま" },
+                            { text: "の" },
+                            { text: "価格", reading: "かかく" },
+                          ]}
+                          elementaryMode={isElementaryChildMode}
                         />
                         :{" "}
                         {asset.latest_unit_price_jpy !== null
@@ -3179,21 +3086,15 @@ export default function AllowanceGrantsPanel({
                       </p>
                       <p>
                         <RubyText
-                          tokens={
-                            isElementaryChildMode
-                              ? [{ text: "きのうとの ちがい" }]
-                              : [{ text: "前日比", reading: "ぜんじつひ" }]
-                          }
+                          tokens={[{ text: "前日比", reading: "ぜんじつひ" }]}
+                          elementaryMode={isElementaryChildMode}
                         />:{" "}
-                        {formatAssetDailyChange(asset, isElementaryChildMode)}
+                        {formatAssetDailyChange(asset)}
                       </p>
                       <p>
                         <RubyText
-                          tokens={
-                            isElementaryChildMode
-                              ? [{ text: "ねだんの ひ" }]
-                              : [{ text: "価格日", reading: "かかくび" }]
-                          }
+                          tokens={[{ text: "価格日", reading: "かかくび" }]}
+                          elementaryMode={isElementaryChildMode}
                         />:{" "}
                         {asset.latest_price_date
                           ? new Date(asset.latest_price_date).toLocaleDateString("ja-JP")
@@ -3210,7 +3111,8 @@ export default function AllowanceGrantsPanel({
 
       {pendingChoice?.type === "investment_confirm" && selectedModalAsset ? (
         <ChoiceModal
-          title={investmentConfirmTitle(selectedModalAsset.asset_name, isElementaryChildMode)}
+          title={investmentConfirmTitle(selectedModalAsset.asset_name)}
+          elementaryMode={isElementaryChildMode}
           footer={
             <div className="grid gap-2 sm:grid-cols-2">
               <PrimaryButton
@@ -3253,15 +3155,12 @@ export default function AllowanceGrantsPanel({
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <p>
                   <RubyText
-                    tokens={
-                      isElementaryChildMode
-                        ? [{ text: "いまの ねだん" }]
-                        : [
-                            { text: "今", reading: "いま" },
-                            { text: "の" },
-                            { text: "価格", reading: "かかく" },
-                          ]
-                    }
+                    tokens={[
+                      { text: "今", reading: "いま" },
+                      { text: "の" },
+                      { text: "価格", reading: "かかく" },
+                    ]}
+                    elementaryMode={isElementaryChildMode}
                   />
                   :{" "}
                   {selectedModalAsset.latest_unit_price_jpy !== null
@@ -3270,13 +3169,10 @@ export default function AllowanceGrantsPanel({
                 </p>
                 <p>
                   <RubyText
-                    tokens={
-                      isElementaryChildMode
-                        ? [{ text: "きのうとの ちがい" }]
-                        : [{ text: "前日比", reading: "ぜんじつひ" }]
-                    }
+                    tokens={[{ text: "前日比", reading: "ぜんじつひ" }]}
+                    elementaryMode={isElementaryChildMode}
                   />:{" "}
-                  {formatAssetDailyChange(selectedModalAsset, isElementaryChildMode)}
+                  {formatAssetDailyChange(selectedModalAsset)}
                 </p>
               </div>
             </div>

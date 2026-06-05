@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AutoHiragana } from "@/app/components/auto-hiragana";
+import useElementaryMode from "@/app/components/use-elementary-mode";
 import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
@@ -709,6 +711,8 @@ export default function HomeDashboard() {
 
   const isGuardian = state.role === "guardian_admin" || state.role === "guardian";
   const isChild = state.role === "child";
+  const { elementaryMode } = useElementaryMode();
+  const isChildElementary = isChild && elementaryMode;
   const greetingName = state.displayName ?? state.email ?? "さん";
 
   // Summary — mirrors AllowanceGrantsPanel: activeGrants excludes cashout_status !== null
@@ -931,7 +935,7 @@ export default function HomeDashboard() {
                   {greetingName}さん！
                 </p>
                 <p className="mt-2 max-w-xs text-sm leading-6 text-[var(--text-secondary)]">
-                  家族みんなでお金のことを楽しく学びましょう
+                  <AutoHiragana enabled={isChildElementary}>家族みんなでお金のことを楽しく学びましょう</AutoHiragana>
                 </p>
               </div>
 
@@ -992,18 +996,20 @@ export default function HomeDashboard() {
           <Card>
             <div className="flex items-center justify-between gap-3">
               <SectionTitle>
-                {isGuardian ? "家族の資産サマリー" : "あなたのお小遣いサマリー"}
+                {isGuardian
+                  ? "家族の資産サマリー"
+                  : <AutoHiragana enabled={isChildElementary}>あなたのお小遣いサマリー</AutoHiragana>}
               </SectionTitle>
               <Link
                 href="/allowance"
                 className="shrink-0 text-sm font-bold text-[var(--brand-primary)]"
               >
-                詳細を見る →
+                <AutoHiragana enabled={isChildElementary}>詳細を見る →</AutoHiragana>
               </Link>
             </div>
 
             <div className="mt-4">
-              <p className="text-xs font-semibold text-[var(--text-secondary)]">現在の総資産</p>
+              <p className="text-xs font-semibold text-[var(--text-secondary)]"><AutoHiragana enabled={isChildElementary}>現在の総資産</AutoHiragana></p>
               <p className="mt-1 text-4xl font-black text-[var(--text-primary)]">
                 {formatCurrency(totalAssets)}
               </p>
@@ -1013,7 +1019,7 @@ export default function HomeDashboard() {
                     totalGain >= 0 ? "text-[var(--success)]" : "text-[var(--danger)]"
                   }`}
                 >
-                  評価損益 {totalGain >= 0 ? "+" : ""}
+                  <AutoHiragana enabled={isChildElementary}>評価損益</AutoHiragana>{" "}{totalGain >= 0 ? "+" : ""}
                   {formatCurrency(totalGain)}
                 </p>
               ) : null}
@@ -1022,7 +1028,7 @@ export default function HomeDashboard() {
             {hasMonthlyActivity ? (
               <div className="mt-5">
                 <p className="mb-2 text-xs font-semibold text-[var(--text-secondary)]">
-                  資産推移（過去6ヶ月）
+                  <AutoHiragana enabled={isChildElementary}>資産推移（過去6ヶ月）</AutoHiragana>
                 </p>
                 <MiniLineChart data={monthlyData} />
               </div>
@@ -1033,7 +1039,7 @@ export default function HomeDashboard() {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Donut card */}
             <Card>
-              <SectionTitle>お金の使い方</SectionTitle>
+              <SectionTitle><AutoHiragana enabled={isChildElementary}>お金の使い方</AutoHiragana></SectionTitle>
               <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-center">
                 <DonutChart
                   invested={donutData.invested}
@@ -1058,7 +1064,7 @@ export default function HomeDashboard() {
                         style={{ backgroundColor: color }}
                       />
                       <span className="flex-1 text-xs leading-snug text-[var(--text-secondary)]">
-                        {label}
+                        <AutoHiragana enabled={isChildElementary}>{label}</AutoHiragana>
                       </span>
                       <span className="pl-2 text-xs font-bold tabular-nums text-[var(--text-primary)]">
                         {formatCurrency(value)}
@@ -1071,7 +1077,7 @@ export default function HomeDashboard() {
 
             {/* Breakdown card */}
             <Card>
-              <SectionTitle>内訳</SectionTitle>
+              <SectionTitle><AutoHiragana enabled={isChildElementary}>内訳</AutoHiragana></SectionTitle>
               <div className="mt-4 flex flex-col gap-3">
                 {[
                   { label: "お小遣い総額", value: totalAllowance },
@@ -1082,7 +1088,9 @@ export default function HomeDashboard() {
                     key={label}
                     className="rounded-[18px] bg-[var(--surface-accent)] px-4 py-3"
                   >
-                    <p className="text-xs font-semibold text-[var(--text-secondary)]">{label}</p>
+                    <p className="text-xs font-semibold text-[var(--text-secondary)]">
+                      <AutoHiragana enabled={isChildElementary}>{label}</AutoHiragana>
+                    </p>
                     <p className="mt-1 text-lg font-black text-[var(--text-primary)]">
                       {formatCurrency(value)}
                     </p>
@@ -1094,7 +1102,7 @@ export default function HomeDashboard() {
 
           {/* 4. Notifications */}
           <Card>
-            <SectionTitle>やること・お知らせ</SectionTitle>
+            <SectionTitle><AutoHiragana enabled={isChildElementary}>やること・お知らせ</AutoHiragana></SectionTitle>
 
             {notifications.length === 0 ? (
               <div className="mt-5 flex flex-col items-center gap-2 py-4 text-center">
@@ -1104,10 +1112,10 @@ export default function HomeDashboard() {
                   </svg>
                 </div>
                 <p className="text-sm font-bold text-[var(--text-primary)]">
-                  いま対応が必要なことはありません
+                  <AutoHiragana enabled={isChildElementary}>いま対応が必要なことはありません</AutoHiragana>
                 </p>
                 <p className="text-xs text-[var(--text-secondary)]">
-                  引き続きファミリーのお金管理を続けましょう
+                  <AutoHiragana enabled={isChildElementary}>引き続きファミリーのお金管理を続けましょう</AutoHiragana>
                 </p>
               </div>
             ) : (
@@ -1124,8 +1132,12 @@ export default function HomeDashboard() {
                       {n.icon}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-[var(--text-primary)]">{n.title}</p>
-                      <p className="text-xs text-[var(--text-secondary)]">{n.description}</p>
+                      <p className="text-sm font-bold text-[var(--text-primary)]">
+                        <AutoHiragana enabled={isChildElementary}>{n.title}</AutoHiragana>
+                      </p>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        <AutoHiragana enabled={isChildElementary}>{n.description}</AutoHiragana>
+                      </p>
                     </div>
                     <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="9 18 15 12 9 6" />
@@ -1162,7 +1174,7 @@ export default function HomeDashboard() {
           {/* 5b. Learning sites — child only */}
           {isChild ? (
             <Card>
-              <SectionTitle>お金を学ぶサイト</SectionTitle>
+              <SectionTitle><AutoHiragana enabled={isChildElementary}>お金を学ぶサイト</AutoHiragana></SectionTitle>
               <div className="mt-4 grid gap-3">
                 {[
                   {
@@ -1196,7 +1208,9 @@ export default function HomeDashboard() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-[var(--text-primary)]">{name}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)]">{description}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)]">
+                        <AutoHiragana enabled={isChildElementary}>{description}</AutoHiragana>
+                      </p>
                     </div>
                     <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="9 18 15 12 9 6" />
@@ -1211,7 +1225,7 @@ export default function HomeDashboard() {
           {isChild ? (
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <SectionTitle>自分のファミリー</SectionTitle>
+                <SectionTitle><AutoHiragana enabled={isChildElementary}>自分のファミリー</AutoHiragana></SectionTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   {state.familyName ? (
                     <span className="rounded-full bg-[var(--surface-accent)] px-3 py-1 text-xs font-bold text-[var(--brand-primary-strong)]">
@@ -1219,12 +1233,14 @@ export default function HomeDashboard() {
                     </span>
                   ) : null}
                   <span className="rounded-full border border-[var(--border-soft)] bg-white px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                    {state.members.length}人のメンバー
+                    {state.members.length}<AutoHiragana enabled={isChildElementary}>人のメンバー</AutoHiragana>
                   </span>
                 </div>
               </div>
               {state.members.length === 0 ? (
-                <p className="mt-4 text-sm text-[var(--text-secondary)]">メンバーが見つかりません</p>
+                <p className="mt-4 text-sm text-[var(--text-secondary)]">
+                  <AutoHiragana enabled={isChildElementary}>メンバーが見つかりません</AutoHiragana>
+                </p>
               ) : (
                 <div className="-mx-1 mt-5 overflow-x-auto pb-1">
                   <div className="flex min-w-max gap-3 px-1">

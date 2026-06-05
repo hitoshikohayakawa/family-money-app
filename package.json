@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "cp -r node_modules/kuromoji/dict public/dict",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -30,6 +31,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
+    "kuroshiro": "^1.2.0",
+    "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4"

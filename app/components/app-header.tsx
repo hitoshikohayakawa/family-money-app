@@ -7,6 +7,7 @@ import useElementaryMode from "@/app/components/use-elementary-mode";
 import { getSafeSession } from "@/lib/client-auth";
 import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
+import { AutoHiragana } from "@/app/components/auto-hiragana";
 import PrimaryButton from "@/app/components/ui/primary-button";
 import SecondaryButton from "@/app/components/ui/secondary-button";
 import StatusBadge from "@/app/components/ui/status-badge";
@@ -516,7 +517,7 @@ export default function AppHeader() {
                     className="rounded-[18px] px-4 py-3 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-accent)]"
                     onClick={() => setMenuOpen(false)}
                   >
-                    {isChild && elementaryMode ? "おこづかい" : "お小遣い"}
+                    <AutoHiragana enabled={isChild && elementaryMode}>お小遣い</AutoHiragana>
                   </Link>
                   {isChild ? (
                     <Link
@@ -524,7 +525,7 @@ export default function AppHeader() {
                       className="rounded-[18px] px-4 py-3 text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-accent)]"
                       onClick={() => setMenuOpen(false)}
                     >
-                      {elementaryMode ? "これまでの うけとりきろく" : "過去の受け取り履歴"}
+                      <AutoHiragana enabled={elementaryMode}>過去の受け取り履歴</AutoHiragana>
                     </Link>
                   ) : null}
                   {isGuardian ? (

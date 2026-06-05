@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { AutoHiragana } from "@/app/components/auto-hiragana";
+import useElementaryMode from "@/app/components/use-elementary-mode";
 
 type Props = {
   id: string;
@@ -15,6 +19,8 @@ export default function NewsCard({
   heroImageUrl,
   publishedAt,
 }: Props) {
+  const { elementaryMode } = useElementaryMode();
+
   const dateStr = publishedAt
     ? new Date(publishedAt).toLocaleDateString("ja-JP")
     : null;
@@ -50,18 +56,18 @@ export default function NewsCard({
         <div className="flex flex-1 flex-col px-5 py-4">
           {/* Category badge */}
           <span className="inline-flex w-fit items-center rounded-full bg-[#E8F5E9] px-2.5 py-1 text-xs font-bold text-[#378C41]">
-            経済・投資の話題
+            <AutoHiragana enabled={elementaryMode}>経済・投資の話題</AutoHiragana>
           </span>
 
           {/* Title */}
           <h2 className="mt-2.5 text-base font-bold leading-snug text-[#1F2D20] sm:text-[1.05rem]">
-            {title}
+            <AutoHiragana enabled={elementaryMode}>{title}</AutoHiragana>
           </h2>
 
           {/* Summary */}
           {summary && (
             <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-[#516251]">
-              {summary}
+              <AutoHiragana enabled={elementaryMode}>{summary}</AutoHiragana>
             </p>
           )}
 
@@ -71,7 +77,7 @@ export default function NewsCard({
               <span className="text-xs text-[#7A9E7E]">{dateStr}</span>
             )}
             <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold text-[#4BAF57] transition-colors group-hover:text-[#378C41]">
-              くわしく見る
+              <AutoHiragana enabled={elementaryMode}>くわしく見る</AutoHiragana>
               <svg
                 viewBox="0 0 24 24"
                 className="h-3.5 w-3.5"

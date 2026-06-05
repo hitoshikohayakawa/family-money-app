@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
 
 type PageContainerProps = {
-  title?: string;
-  description?: string;
+  title?: ReactNode;
+  description?: ReactNode;
   badge?: string;
   children: ReactNode;
 };

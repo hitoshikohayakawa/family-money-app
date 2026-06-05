@@ -5,6 +5,7 @@ import FooterNav from "@/app/components/ui/footer-nav";
 import EmptyState from "@/app/components/ui/empty-state";
 import NewsPageHeader from "@/app/components/news/news-page-header";
 import NewsCard from "@/app/components/news/news-card";
+import NewsListHeader from "@/app/news/news-list-header";
 import { createServiceRoleServerClient } from "@/lib/server-supabase";
 
 export const dynamic = "force-dynamic";
@@ -49,14 +50,7 @@ export default async function NewsPage() {
           <NewsPageHeader />
 
           {/* Section title */}
-          <div className="mt-8 mb-6">
-            <h1 className="text-2xl font-extrabold text-[#1F2D20] sm:text-3xl">
-              ニュース一覧
-            </h1>
-            <p className="mt-1.5 text-sm leading-relaxed text-[#516251] sm:text-base">
-              親子でお金のことを楽しく学べるニュースをお届けします
-            </p>
-          </div>
+          <NewsListHeader />
 
           {/* Articles */}
           {rows.length === 0 ? (

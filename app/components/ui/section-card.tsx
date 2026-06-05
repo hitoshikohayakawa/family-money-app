@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
 
 type SectionCardProps = {
-  title: string;
-  description?: string;
+  title: ReactNode;
+  description?: ReactNode;
   children: ReactNode;
   className?: string;
   tone?: "default" | "playful";

@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
 
 type EmptyStateProps = {
-  title: string;
-  description: string;
+  title: ReactNode;
+  description: ReactNode;
   action?: ReactNode;
 };
 
