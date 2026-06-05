@@ -452,7 +452,17 @@ export default function FamilyInvitesPanel() {
     }
   };
 
-  const filteredInvites = state.invites.filter((invite) => {
+  // 同一メールアドレスは最新の招待のみ表示（created_at 降順で先勝ち）
+  const latestByEmail = new Map<string, FamilyInvite>();
+  for (const invite of state.invites) {
+    const existing = latestByEmail.get(invite.email);
+    if (!existing || invite.created_at > existing.created_at) {
+      latestByEmail.set(invite.email, invite);
+    }
+  }
+  const deduplicatedInvites = Array.from(latestByEmail.values());
+
+  const filteredInvites = deduplicatedInvites.filter((invite) => {
     if (inviteFilter === "all") {
       return true;
     }
@@ -460,8 +470,8 @@ export default function FamilyInvitesPanel() {
     return invite.effective_status === inviteFilter;
   });
 
-  const pendingCount = state.invites.filter((invite) => invite.effective_status === "pending").length;
-  const acceptedCount = state.invites.filter((invite) => invite.effective_status === "accepted").length;
+  const pendingCount = deduplicatedInvites.filter((invite) => invite.effective_status === "pending").length;
+  const acceptedCount = deduplicatedInvites.filter((invite) => invite.effective_status === "accepted").length;
 
   if (!state.loading && state.membership?.role !== "guardian_admin") {
     return null;
