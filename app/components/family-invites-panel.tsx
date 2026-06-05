@@ -65,6 +65,7 @@ type FamilyInvitesState = {
   copiedShareTextInviteId: string | null;
   membership: FamilyMembership | null;
   invites: FamilyInvite[];
+  activeMemberEmails: Set<string>;
 };
 
 export default function FamilyInvitesPanel() {
@@ -82,6 +83,7 @@ export default function FamilyInvitesPanel() {
     copiedShareTextInviteId: null,
     membership: null,
     invites: [],
+    activeMemberEmails: new Set(),
   });
   const [createdInviteModal, setCreatedInviteModal] = useState<{
     inviteId: string;
@@ -112,6 +114,7 @@ export default function FamilyInvitesPanel() {
           copiedShareTextInviteId: null,
           membership: null,
           invites: [],
+          activeMemberEmails: new Set(),
         });
         return;
       }
@@ -127,6 +130,7 @@ export default function FamilyInvitesPanel() {
           copiedShareTextInviteId: null,
           membership: null,
           invites: [],
+          activeMemberEmails: new Set(),
         });
         return;
       }
@@ -153,6 +157,7 @@ export default function FamilyInvitesPanel() {
           copiedShareTextInviteId: null,
           membership: null,
           invites: [],
+          activeMemberEmails: new Set(),
         });
         return;
       }
@@ -168,11 +173,15 @@ export default function FamilyInvitesPanel() {
           copiedShareTextInviteId: null,
           membership: null,
           invites: [],
+          activeMemberEmails: new Set(),
         });
         return;
       }
 
-      const { data: invites, error: invitesError } = await fetchFamilyInvites();
+      const [{ data: invites, error: invitesError }, { data: membersData }] = await Promise.all([
+        fetchFamilyInvites(),
+        supabase.rpc("list_family_members_for_current_user"),
+      ]);
 
       if (!isActive) {
         return;
@@ -189,15 +198,23 @@ export default function FamilyInvitesPanel() {
           copiedShareTextInviteId: null,
           membership,
           invites: [],
+          activeMemberEmails: new Set(),
         });
         return;
       }
+
+      const activeMemberEmails = new Set<string>(
+        (Array.isArray(membersData) ? (membersData as { email: string }[]) : [])
+          .map((m) => (m.email ?? "").toLowerCase())
+          .filter(Boolean)
+      );
 
       setState((currentState) => ({
         ...currentState,
         loading: false,
         membership,
         invites: Array.isArray(invites) ? (invites as FamilyInvite[]) : [],
+        activeMemberEmails,
         error: "",
         revokingInviteId: currentState.revokingInviteId,
         copiedInviteId: currentState.copiedInviteId,
@@ -460,7 +477,13 @@ export default function FamilyInvitesPanel() {
       latestByEmail.set(invite.email, invite);
     }
   }
-  const deduplicatedInvites = Array.from(latestByEmail.values());
+  // 参加済みかつアクティブメンバーでない場合は非表示（家族から削除済みユーザーを隠す）
+  const deduplicatedInvites = Array.from(latestByEmail.values()).filter((invite) => {
+    if (invite.effective_status === "accepted") {
+      return state.activeMemberEmails.has(invite.email.toLowerCase());
+    }
+    return true;
+  });
 
   const filteredInvites = deduplicatedInvites.filter((invite) => {
     if (inviteFilter === "all") {
