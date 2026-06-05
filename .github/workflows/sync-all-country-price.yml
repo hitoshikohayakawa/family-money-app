@@ -1,6 +1,10 @@
 name: Sync All-Country Price
 
 on:
+  schedule:
+    # 平日 8:00 JST (= 23:00 UTC 前日) に自動実行
+    # 全世界株ETF価格は前営業日終値を使用するため翌朝取得で問題なし
+    - cron: '0 23 * * 1-5'
   workflow_dispatch:
     inputs:
       dry_run:
