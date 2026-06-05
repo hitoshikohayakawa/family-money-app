@@ -265,11 +265,19 @@ export async function PATCH(
     }
   }
 
-  // Update avatar fields in family_memberships if provided
+  // Update avatar fields in family_memberships if provided.
+  // When a new emoji is set, clear the photo path (and vice versa) so the
+  // most recently chosen type always takes effect after a page reload.
   if (avatarEmojiInput !== undefined || avatarPathInput !== undefined) {
     const avatarUpdate: Record<string, unknown> = {};
-    if (avatarEmojiInput !== undefined) avatarUpdate.avatar_emoji = avatarEmojiInput;
-    if (avatarPathInput !== undefined) avatarUpdate.avatar_path = avatarPathInput;
+    if (avatarEmojiInput !== undefined) {
+      avatarUpdate.avatar_emoji = avatarEmojiInput;
+      if (avatarEmojiInput !== null) avatarUpdate.avatar_path = null;
+    }
+    if (avatarPathInput !== undefined) {
+      avatarUpdate.avatar_path = avatarPathInput;
+      if (avatarPathInput !== null) avatarUpdate.avatar_emoji = null;
+    }
 
     const { error: avatarError } = await adminClient
       .from("family_memberships")
