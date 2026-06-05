@@ -174,11 +174,14 @@ export async function POST(request: Request) {
   }
 
   if (invitedUser) {
+    // family_memberships で status = 'active' のみを確認する。
+    // 論理削除（status = 'disabled'）済みのメンバーは再招待可能にする。
     const { data: existingFamilyMember, error: existingFamilyMemberError } =
       await adminClient
-        .from("family_members")
+        .from("family_memberships")
         .select("family_id")
         .eq("user_id", invitedUser.id)
+        .eq("status", "active")
         .maybeSingle();
 
     if (existingFamilyMemberError) {
