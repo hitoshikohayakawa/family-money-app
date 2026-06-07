@@ -1,9 +1,9 @@
-name: Sync All-Country Price
+name: Sync MUFG Index Fund Prices
 
 on:
   schedule:
     # 平日 8:00 JST (= 23:00 UTC 前日) に自動実行
-    # 全世界株ETF価格は前営業日終値を使用するため翌朝取得で問題なし
+    # eMAXIS Slim ファンドの基準価額は前営業日終値を使用するため翌朝取得で問題なし
     - cron: '0 23 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -47,12 +47,12 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: echo "PRICE_SYNC_DRY_RUN=1" >> "$GITHUB_ENV"
 
-      - name: Sync all-country price
-        run: npm run prices:sync:all-country
+      - name: Sync MUFG index fund prices (全世界・S&P500・TOPIX・新興国)
+        run: npm run prices:sync:mufg-index
 
-      - name: Verify latest synced price
+      - name: Verify latest synced prices
         if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
-        run: npm run prices:check:all-country
+        run: npm run prices:check:mufg-index
 
       - name: Send failure notification email
         if: ${{ failure() }}
