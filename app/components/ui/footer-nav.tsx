@@ -59,6 +59,14 @@ function SettingsIcon({ active }: { active: boolean }) {
   );
 }
 
+function ChartIcon({ active }: { active: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8}>
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function FooterNav() {
   const pathname = usePathname();
   const [isChild, setIsChild] = useState(false);
@@ -88,6 +96,7 @@ export default function FooterNav() {
     { href: "/", label: "ホーム" },
     { href: "/allowance", label: "お小遣い" },
     { href: "/news", label: "ニュース", matchPrefix: true },
+    { href: "/charts", label: "チャート", matchPrefix: true },
     ...(isChild
       ? [{ href: "/settings", label: "設定" } as NavItem]
       : [{ href: "/family", label: "家族設定", matchPrefix: true } as NavItem]
@@ -104,11 +113,12 @@ export default function FooterNav() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center gap-0.5 px-5 py-2 text-xs font-semibold transition ${color}`}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] font-semibold transition sm:px-4 sm:text-xs ${color}`}
             >
               {href === "/" && <HomeIcon active={active} />}
               {href === "/allowance" && <WalletIcon active={active} />}
               {href === "/news" && <NewsIcon active={active} />}
+              {href === "/charts" && <ChartIcon active={active} />}
               {href === "/family" && <FamilyIcon active={active} />}
               {href === "/settings" && <SettingsIcon active={active} />}
               <span>{label}</span>
