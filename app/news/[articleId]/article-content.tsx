@@ -103,12 +103,12 @@ export default function ArticleContent({
         </div>
 
         {heroUrl ? (
-          <div className="mt-6 aspect-[16/9] overflow-hidden">
+          <div className="mt-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={heroUrl}
               alt={article.title}
-              className="h-full w-full object-cover"
+              className="block h-auto w-full"
             />
           </div>
         ) : (
