@@ -61,20 +61,31 @@ function changeInfo(prices: PriceRow[]) {
 
 function ChartMascot({ elementaryMode }: { elementaryMode: boolean }) {
   return (
-    <div className="flex items-end gap-3">
+    <div className="flex items-center gap-3">
       <div className="relative rounded-[16px] bg-white px-4 py-2.5 shadow-[0_4px_16px_rgba(76,163,104,0.15)]">
         <p className="text-xs font-bold leading-snug text-[#1F2D20]">
           <AutoHiragana enabled={elementaryMode}>気になる会社の</AutoHiragana>
           <br />
           <AutoHiragana enabled={elementaryMode}>値動きを見てみよう！</AutoHiragana>
         </p>
-        <span
-          className="absolute -right-2 top-1/2 -translate-y-1/2 border-8 border-transparent border-l-white"
+        {/* 吹き出しの三角（右向き） */}
+        <svg
+          className="absolute -right-[14px] top-1/2 -translate-y-1/2"
+          width="14"
+          height="20"
+          viewBox="0 0 14 20"
           aria-hidden
-        />
+        >
+          <path d="M0 0 L14 10 L0 20 Z" fill="white" />
+        </svg>
       </div>
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#C8EDCA] text-4xl shadow-[0_4px_12px_rgba(76,163,104,0.2)]">
-        👦
+      <div className="relative h-24 w-24 shrink-0 sm:h-32 sm:w-28">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/mirakun-chart.png"
+          alt="ミラくん"
+          className="h-full w-full object-contain drop-shadow-md"
+        />
       </div>
     </div>
   );

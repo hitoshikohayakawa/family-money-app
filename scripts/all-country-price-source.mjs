@@ -47,6 +47,34 @@ export function parseLatestPrice(csvText) {
   throw new Error("No price rows were found in CSV.");
 }
 
+/**
+ * CSV テキストから sinceDate 以降の全行を返す。
+ * CSV は最新→古い順にソートされている想定。
+ * @param {string} csvText
+ * @param {string} sinceDate  YYYY-MM-DD 形式
+ * @returns {{ priceDate: string, unitPriceJpy: number }[]}
+ */
+export function parseAllPrices(csvText, sinceDate) {
+  const rows = csvText.split(/\r?\n/);
+  const result = [];
+
+  for (const rawRow of rows) {
+    const row = rawRow.trim();
+    if (!/^\d{4}-\d{2}-\d{2},/.test(row)) continue;
+
+    const [priceDate, unitPriceText] = row.split(",");
+    if (!isIsoDate(priceDate)) continue;
+    if (priceDate < sinceDate) break; // CSV は新→旧順なので以降は不要
+
+    const unitPriceJpy = Number.parseInt(unitPriceText, 10);
+    if (!Number.isInteger(unitPriceJpy) || unitPriceJpy <= 0) continue;
+
+    result.push({ priceDate, unitPriceJpy });
+  }
+
+  return result;
+}
+
 export async function fetchLatestAllCountryPrice(csvUrl) {
   let response;
 

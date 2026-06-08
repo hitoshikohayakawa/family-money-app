@@ -214,7 +214,7 @@ export default function ChartDetailContent({ asset, prices, newsResult }: Props)
               <AutoHiragana enabled={elementaryMode}>直近3か月の値動き（終値）</AutoHiragana>
             </h2>
             <p className="mt-0.5 text-xs text-[#7A9E7E]">
-              <AutoHiragana enabled={elementaryMode}>1日の細かい動きではなく、大きな流れを見るためのものです。</AutoHiragana>
+              <AutoHiragana enabled={elementaryMode}>1日の最後の価格をつないだものです。細かい動きではなく、大きな流れを見てみましょう。</AutoHiragana>
             </p>
           </div>
           <span className="rounded-full bg-[#E8F5E9] px-2.5 py-1 text-[10px] font-bold text-[#4BAF57]">

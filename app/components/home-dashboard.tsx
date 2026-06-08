@@ -1102,49 +1102,73 @@ export default function HomeDashboard() {
 
           {/* 4. Notifications */}
           <Card>
-            <SectionTitle><AutoHiragana enabled={isChildElementary}>やること・お知らせ</AutoHiragana></SectionTitle>
-
             {notifications.length === 0 ? (
-              <div className="mt-5 flex flex-col items-center gap-2 py-4 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(76,163,104,0.12)]">
-                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-[var(--success)]" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+              /* 空状態: 左列（タイトル＋内容）＋右列（吹き出し＋大きいイラスト） */
+              <div className="flex items-stretch gap-4">
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <SectionTitle><AutoHiragana enabled={isChildElementary}>やること・お知らせ</AutoHiragana></SectionTitle>
+                  <div className="mt-5 flex flex-col gap-2">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(76,163,104,0.12)]">
+                      <svg viewBox="0 0 24 24" className="h-6 w-6 text-[var(--success)]" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-bold text-[var(--text-primary)]">
+                      <AutoHiragana enabled={isChildElementary}>いま対応が必要なことはありません</AutoHiragana>
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      <AutoHiragana enabled={isChildElementary}>引き続きファミリーのお金管理を続けましょう</AutoHiragana>
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-[var(--text-primary)]">
-                  <AutoHiragana enabled={isChildElementary}>いま対応が必要なことはありません</AutoHiragana>
-                </p>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  <AutoHiragana enabled={isChildElementary}>引き続きファミリーのお金管理を続けましょう</AutoHiragana>
-                </p>
+                <div className="flex w-36 shrink-0 flex-col items-center">
+                  <div className="w-full rounded-2xl bg-[#E8F5E9] px-3 py-2.5 text-center">
+                    <p className="text-xs font-bold leading-snug text-[#2E7D32]">
+                      <AutoHiragana enabled={isChildElementary}>チャートやニュースをチェックして、次のおこづかいに備えよう</AutoHiragana>
+                    </p>
+                  </div>
+                  <svg className="shrink-0" width="16" height="10" viewBox="0 0 16 10" aria-hidden>
+                    <path d="M0 0 L16 0 L8 10 Z" fill="#E8F5E9" />
+                  </svg>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/mirakun-surprised.png"
+                    alt="ミラくん"
+                    className="min-h-0 flex-1 w-full object-contain object-top drop-shadow-sm"
+                  />
+                </div>
               </div>
             ) : (
-              <div className="mt-3 grid gap-2">
-                {notifications.map((n) => (
-                  <Link
-                    key={n.key}
-                    href={n.href}
-                    className="flex items-center gap-3 rounded-[20px] border border-[var(--border-soft)] bg-white px-4 py-3 transition hover:bg-[var(--surface-accent)]"
-                  >
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${n.iconBg} ${n.iconColor}`}
+              /* お知らせあり: タイトル＋リスト */
+              <>
+                <SectionTitle><AutoHiragana enabled={isChildElementary}>やること・お知らせ</AutoHiragana></SectionTitle>
+                <div className="mt-3 grid gap-2">
+                  {notifications.map((n) => (
+                    <Link
+                      key={n.key}
+                      href={n.href}
+                      className="flex items-center gap-3 rounded-[20px] border border-[var(--border-soft)] bg-white px-4 py-3 transition hover:bg-[var(--surface-accent)]"
                     >
-                      {n.icon}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-[var(--text-primary)]">
-                        <AutoHiragana enabled={isChildElementary}>{n.title}</AutoHiragana>
-                      </p>
-                      <p className="text-xs text-[var(--text-secondary)]">
-                        <AutoHiragana enabled={isChildElementary}>{n.description}</AutoHiragana>
-                      </p>
-                    </div>
-                    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </Link>
-                ))}
-              </div>
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${n.iconBg} ${n.iconColor}`}
+                      >
+                        {n.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-[var(--text-primary)]">
+                          <AutoHiragana enabled={isChildElementary}>{n.title}</AutoHiragana>
+                        </p>
+                        <p className="text-xs text-[var(--text-secondary)]">
+                          <AutoHiragana enabled={isChildElementary}>{n.description}</AutoHiragana>
+                        </p>
+                      </div>
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[var(--text-muted)]" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </Link>
+                  ))}
+                </div>
+              </>
             )}
           </Card>
 
