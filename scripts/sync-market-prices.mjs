@@ -112,6 +112,21 @@ async function fetchCommodityPrices() {
   };
 }
 
+async function fetchUsStockPrices() {
+  const [aaplMeta, amznMeta, nvdaMeta, fxMeta] = await Promise.all([
+    fetchYahooFinance("AAPL"),
+    fetchYahooFinance("AMZN"),
+    fetchYahooFinance("NVDA"),
+    fetchYahooFinance("USDJPY=X"),
+  ]);
+  const usdJpy = fxMeta.regularMarketPrice;
+  return {
+    apple:  { unitPriceJpy: Math.round(aaplMeta.regularMarketPrice * usdJpy), priceDate: toJstDate(aaplMeta.regularMarketTime), source: "yahoo_finance:AAPL:usdjpy" },
+    amazon: { unitPriceJpy: Math.round(amznMeta.regularMarketPrice * usdJpy), priceDate: toJstDate(amznMeta.regularMarketTime), source: "yahoo_finance:AMZN:usdjpy" },
+    nvidia: { unitPriceJpy: Math.round(nvdaMeta.regularMarketPrice * usdJpy), priceDate: toJstDate(nvdaMeta.regularMarketTime), source: "yahoo_finance:NVDA:usdjpy" },
+  };
+}
+
 // ── DB upsert ─────────────────────────────────────────────────────────────────
 
 async function upsertPrice(client, assetCode, { unitPriceJpy, priceDate, source }) {
@@ -194,6 +209,21 @@ try {
 if (commodityPrices) {
   await run("金（ゴールド）", "gold_spot_asset",   async () => commodityPrices.gold);
   await run("銀（シルバー）", "silver_spot_asset", async () => commodityPrices.silver);
+}
+
+// 米国株
+console.log("\n🇺🇸  米国株価格を取得中...");
+let usStockPrices = null;
+try {
+  usStockPrices = await fetchUsStockPrices();
+} catch (err) {
+  console.error(`  ✗ 米国株取得失敗: ${err instanceof Error ? err.message : err}`);
+  results.failed.push({ assetCode: "apple_stock,amazon_stock,nvidia_stock", label: "Yahoo Finance US Stocks", error: String(err) });
+}
+if (usStockPrices) {
+  await run("Apple",   "apple_stock",  async () => usStockPrices.apple);
+  await run("Amazon",  "amazon_stock", async () => usStockPrices.amazon);
+  await run("NVIDIA",  "nvidia_stock", async () => usStockPrices.nvidia);
 }
 
 // 結果サマリー

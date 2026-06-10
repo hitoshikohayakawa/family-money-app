@@ -56,6 +56,13 @@ const CRYPTO = [
   { asset_code: "ethereum_crypto", market_symbol: "ETH-JPY" },
 ];
 
+/** 米国株: Yahoo Finance USD建て + USDJPY で円換算 (1株あたり JPY) */
+const US_STOCKS = [
+  { asset_code: "apple_stock",  market_symbol: "AAPL" },
+  { asset_code: "amazon_stock", market_symbol: "AMZN" },
+  { asset_code: "nvidia_stock", market_symbol: "NVDA" },
+];
+
 /** コモディティ: USD建て先物 + USDJPY で円換算 (円/g) */
 const COMMODITIES = [
   { asset_code: "gold_spot_asset",   market_symbol: "GC=F" },
@@ -99,6 +106,7 @@ const allAssetCodes = [
   ...STOCKS.map((s) => s.asset_code),
   ...CRYPTO.map((c) => c.asset_code),
   ...COMMODITIES.map((c) => c.asset_code),
+  ...US_STOCKS.map((s) => s.asset_code),
   ...MUFG_FUNDS.map((f) => f.asset_code),
 ];
 const { data: dbAssets, error: dbErr } = await client
@@ -224,6 +232,35 @@ if (usdJpyMap.size > 0) {
         const rate = lookupUsdJpy(dateStr);
         if (rate == null) continue; // USDJPY が取得できない日はスキップ
         const priceJpy = Math.round(q.close * rate / TROY_OZ_TO_GRAM);
+        if (priceJpy <= 0) continue;
+        rows.push({
+          asset_id: asset.id,
+          price_date: dateStr,
+          unit_price_jpy: priceJpy,
+          source: `yahoo_finance_daily:${market_symbol}:usdjpy`,
+        });
+      }
+      await upsertRows(rows, asset.asset_name);
+    } catch (e) {
+      console.error(`  ✗ ${e.message}`);
+      results.failed.push({ name: asset.asset_name, error: e.message });
+    }
+  }
+
+  console.log("\n─── 米国株");
+  for (const { asset_code, market_symbol } of US_STOCKS) {
+    const asset = assetMap[asset_code];
+    if (!asset) { console.log(`  ⚠️  DB に見つかりません: ${asset_code}`); continue; }
+    console.log(`🇺🇸  ${asset.asset_name} (${market_symbol})`);
+    try {
+      const data = await yf.chart(market_symbol, { period1, period2, interval: "1d" }, { validateResult: false });
+      const rows = [];
+      for (const q of (data.quotes ?? [])) {
+        if (q.close == null || isNaN(q.close)) continue;
+        const dateStr = toJstDateStr(q.date);
+        const rate = lookupUsdJpy(dateStr);
+        if (rate == null) continue;
+        const priceJpy = Math.round(q.close * rate);
         if (priceJpy <= 0) continue;
         rows.push({
           asset_id: asset.id,

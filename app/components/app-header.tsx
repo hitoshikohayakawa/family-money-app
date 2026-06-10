@@ -368,10 +368,10 @@ export default function AppHeader() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="relative flex items-center gap-2">
           {/* Bell notification button */}
           {state.email ? (
-            <div className="relative" ref={bellRef}>
+            <div ref={bellRef}>
               <button
                 type="button"
                 aria-label="お知らせ"

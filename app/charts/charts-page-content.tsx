@@ -99,7 +99,8 @@ export default function ChartsPageContent({ assets }: Props) {
 
       {/* ── Page header ── */}
       <div className="mb-5 overflow-hidden rounded-[24px] bg-gradient-to-br from-[#4BAF57] to-[#2E8B57] p-5 shadow-[0_8px_32px_rgba(75,175,87,0.25)]">
-        <div className="flex items-center justify-between gap-4">
+        {/* モバイル: 縦積み / デスクトップ: 横並び */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div>
             <div className="flex items-center gap-2.5">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
@@ -118,7 +119,7 @@ export default function ChartsPageContent({ assets }: Props) {
               <AutoHiragana enabled={elementaryMode}>※価格は参考です（20分遅れ）</AutoHiragana>
             </p>
           </div>
-          <div className="shrink-0">
+          <div className="shrink-0 self-end sm:self-auto">
             <ChartMascot elementaryMode={elementaryMode} />
           </div>
         </div>
