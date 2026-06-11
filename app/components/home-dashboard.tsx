@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AutoHiragana } from "@/app/components/auto-hiragana";
 import useElementaryMode from "@/app/components/use-elementary-mode";
 import { getSafeSession } from "@/lib/client-auth";
@@ -9,6 +9,10 @@ import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import MemberAvatar from "@/app/components/ui/member-avatar";
 import StatusBadge from "@/app/components/ui/status-badge";
+import HomeTodoCard, {
+  type InvestmentAssetOption,
+  type FamilyTaskTodo,
+} from "@/app/components/home/home-todo-card";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +41,19 @@ type GrantRow = {
   cashout_paid_at: string | null;
 };
 
+type TaskRow = {
+  id: string;
+  child_user_id: string;
+  child_display_label: string;
+  title: string;
+  description: string | null;
+  reward_amount_jpy: number | null;
+  due_at: string | null;
+  recurrence: string;
+  status: string;
+  requires_confirmation: boolean;
+};
+
 type HomeState = {
   loading: boolean;
   isAuthenticated: boolean;
@@ -48,6 +65,8 @@ type HomeState = {
   familyName: string | null;
   members: FamilyMember[];
   grants: GrantRow[];
+  investmentAssets: InvestmentAssetOption[];
+  tasks: TaskRow[];
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -538,6 +557,15 @@ function IconPeople() {
   );
 }
 
+function IconTasks() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9 11l3 3L22 4" />
+      <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+    </svg>
+  );
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -616,7 +644,26 @@ export default function HomeDashboard() {
     familyName: null,
     members: [],
     grants: [],
+    investmentAssets: [],
+    tasks: [],
   });
+
+  // お小遣いの判断（すぐもらう / 投資する）後に一覧だけを再取得する。
+  // 判断ロジックそのものは HomeTodoCard 内で既存 API / RPC を呼ぶ。
+  const reloadGrants = useCallback(async () => {
+    const { data } = await supabase.rpc("list_allowance_grants_for_current_user");
+    if (Array.isArray(data)) {
+      setState((s) => ({ ...s, grants: data as GrantRow[] }));
+    }
+  }, []);
+
+  // やること（完了報告）後に一覧だけを再取得する。
+  const reloadTasks = useCallback(async () => {
+    const { data } = await supabase.rpc("list_family_tasks_for_current_user");
+    if (Array.isArray(data)) {
+      setState((s) => ({ ...s, tasks: data as TaskRow[] }));
+    }
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -642,6 +689,8 @@ export default function HomeDashboard() {
         { data: profile },
         { data: membersRaw },
         { data: grantsRaw },
+        { data: assetsRaw },
+        { data: tasksRaw },
       ] = await Promise.all([
         supabase
           .from("family_memberships")
@@ -652,6 +701,8 @@ export default function HomeDashboard() {
         supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
         supabase.rpc("list_family_members_for_current_user"),
         supabase.rpc("list_allowance_grants_for_current_user"),
+        supabase.rpc("list_investment_assets_for_current_user"),
+        supabase.rpc("list_family_tasks_for_current_user"),
       ]);
 
       if (!isActive) return;
@@ -686,6 +737,10 @@ export default function HomeDashboard() {
         familyName,
         members: Array.isArray(membersRaw) ? (membersRaw as FamilyMember[]) : [],
         grants: Array.isArray(grantsRaw) ? (grantsRaw as GrantRow[]) : [],
+        investmentAssets: Array.isArray(assetsRaw)
+          ? (assetsRaw as InvestmentAssetOption[])
+          : [],
+        tasks: Array.isArray(tasksRaw) ? (tasksRaw as TaskRow[]) : [],
       });
     };
 
@@ -761,6 +816,26 @@ export default function HomeDashboard() {
       )
     : [];
 
+  // やること: 子は自分の未完了・承認待ち、親は承認待ち件数を扱う
+  const childTasks: FamilyTaskTodo[] = isChild
+    ? state.tasks
+        .filter((t) => t.child_user_id === state.userId && (t.status === "open" || t.status === "submitted"))
+        .map((t) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          reward_amount_jpy: t.reward_amount_jpy,
+          due_at: t.due_at,
+          recurrence: t.recurrence,
+          status: t.status,
+          requires_confirmation: t.requires_confirmation,
+        }))
+    : [];
+
+  const submittedTasksForGuardian = isGuardian
+    ? state.tasks.filter((t) => t.status === "submitted")
+    : [];
+
   const ownMember = state.members.find((m) => m.user_id === state.userId);
   const profileNotSet = !ownMember?.avatar_path && !ownMember?.avatar_emoji;
 
@@ -798,17 +873,19 @@ export default function HomeDashboard() {
       href: "/allowance",
     });
   }
-  if (pendingDecisionsForChild.length > 0) {
+  if (submittedTasksForGuardian.length > 0) {
     notifications.push({
-      key: "pending-child",
+      key: "task-approval",
       icon: <IconDocument />,
       iconBg: "bg-[rgba(228,163,94,0.12)]",
       iconColor: "text-[var(--warning)]",
-      title: "まだ決めていないお小遣いがあります",
-      description: `${pendingDecisionsForChild.length}件が未決定です`,
-      href: "/allowance",
+      title: "やることの承認まちがあります",
+      description: `${submittedTasksForGuardian.length}件が完了報告されています`,
+      href: "/tasks",
     });
   }
+  // 子どもの未決定お小遣いは、上部の「やること」カード(HomeTodoCard)で
+  // 金額・付与日・選択ボタン付きで目立たせるため、ここでは通知に重複表示しない。
   if (profileNotSet) {
     notifications.push({
       key: "profile",
@@ -832,6 +909,14 @@ export default function HomeDashboard() {
     });
   }
 
+  // ヒーローの「今日の状態」: 対応が必要なことがあれば一言で伝える
+  const hasActionItems = isChild
+    ? pendingDecisionsForChild.length > 0 || childTasks.length > 0
+    : notifications.length > 0;
+  const heroSubtitle = hasActionItems
+    ? "今日は確認することがあります"
+    : "家族みんなでお金のことを楽しく学びましょう";
+
   // Quick menu items with SVG icons
   type QuickItem = {
     href: string;
@@ -851,6 +936,13 @@ export default function HomeDashboard() {
     },
     ...(isGuardian
       ? [
+          {
+            href: "/tasks",
+            label: "やること設定",
+            icon: <IconTasks />,
+            iconBg: "bg-[rgba(228,163,94,0.12)]",
+            iconColor: "text-[var(--warning)]",
+          },
           {
             href: "/family",
             label: "家族設定",
@@ -935,7 +1027,7 @@ export default function HomeDashboard() {
                   {greetingName}さん！
                 </p>
                 <p className="mt-2 max-w-xs text-sm leading-6 text-[var(--text-secondary)]">
-                  <AutoHiragana enabled={isChildElementary}>家族みんなでお金のことを楽しく学びましょう</AutoHiragana>
+                  <AutoHiragana enabled={isChildElementary}>{heroSubtitle}</AutoHiragana>
                 </p>
               </div>
 
@@ -956,6 +1048,23 @@ export default function HomeDashboard() {
               </div>
             </div>
           </section>
+
+          {/* 1b. やること — 子どもの未決定お小遣いを目立つカードで表示。
+               将来は親が設定したやること(宿題・お手伝い等)もここに並べる。 */}
+          {isChild ? (
+            <HomeTodoCard
+              pendingGrants={pendingDecisionsForChild.map((g) => ({
+                id: g.id,
+                amount_jpy: g.amount_jpy,
+                granted_at: g.granted_at,
+              }))}
+              tasks={childTasks}
+              investmentAssets={state.investmentAssets}
+              elementaryMode={isChildElementary}
+              onDecided={reloadGrants}
+              onTaskChanged={reloadTasks}
+            />
+          ) : null}
 
           {/* 2. Family card — guardian only (child sees it at the bottom) */}
           {isGuardian ? (
@@ -1132,7 +1241,7 @@ export default function HomeDashboard() {
                   </svg>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/images/mirakun-surprised.png"
+                    src="/images/character/mirakun-surprised.png"
                     alt="ミラくん"
                     className="min-h-0 flex-1 w-full object-contain object-top drop-shadow-sm"
                   />

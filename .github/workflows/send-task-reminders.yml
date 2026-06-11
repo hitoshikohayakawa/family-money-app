@@ -1,0 +1,34 @@
+name: Send Task Reminders
+
+on:
+  schedule:
+    # 毎日 07:00 JST (= 22:00 UTC 前日) に当日のやることをリマインド
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: send-task-reminders
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger reminder endpoint
+        env:
+          # 既定は正規ドメイン(www)。apex(famimane.me)は www へ307転送されるため直接wwwを叩く。
+          APP_URL: ${{ secrets.APP_URL || 'https://www.famimane.me' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET secret is not set." >&2
+            exit 1
+          fi
+          # -L: 万一リダイレクトされても追従（カスタムヘッダは再送される）
+          curl -fsSL --retry 2 -X POST \
+            -H "x-cron-secret: $CRON_SECRET" \
+            "$APP_URL/api/tasks/send-reminders"

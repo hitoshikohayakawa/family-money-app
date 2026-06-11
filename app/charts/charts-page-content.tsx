@@ -82,7 +82,7 @@ function ChartMascot({ elementaryMode }: { elementaryMode: boolean }) {
       <div className="relative h-24 w-24 shrink-0 sm:h-32 sm:w-28">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/images/mirakun-chart.png"
+          src="/images/character/mirakun-chart.png"
           alt="ミラくん"
           className="h-full w-full object-contain drop-shadow-md"
         />

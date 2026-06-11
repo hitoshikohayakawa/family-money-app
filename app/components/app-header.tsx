@@ -11,6 +11,7 @@ import { AutoHiragana } from "@/app/components/auto-hiragana";
 import PrimaryButton from "@/app/components/ui/primary-button";
 import SecondaryButton from "@/app/components/ui/secondary-button";
 import StatusBadge from "@/app/components/ui/status-badge";
+import { detectPwaPlatform } from "@/app/components/pwa-guide-modal";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -101,7 +102,11 @@ function IconMegaphone() {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function AppHeader() {
+type AppHeaderProps = {
+  onOpenPwaModal?: () => void;
+};
+
+export default function AppHeader({ onOpenPwaModal }: AppHeaderProps = {}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(() => {
@@ -554,6 +559,18 @@ export default function AppHeader() {
                     >
                       アカウント設定
                     </Link>
+                  ) : null}
+                  {onOpenPwaModal && detectPwaPlatform() !== null ? (
+                    <button
+                      type="button"
+                      className="rounded-[18px] px-4 py-3 text-left text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--surface-accent)]"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpenPwaModal();
+                      }}
+                    >
+                      ホーム画面に追加する
+                    </button>
                   ) : null}
                   <a
                     href="https://forms.gle/NC7prDQbAzzZe7N3A"

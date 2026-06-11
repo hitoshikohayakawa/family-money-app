@@ -24,6 +24,7 @@
     "test:allowance-investment-smoke": "node scripts/allowance-investment-smoke.mjs",
     "test:allowance-multi-child-smoke": "node scripts/allowance-multi-child-smoke.mjs",
     "test:allowance-cashout-smoke": "node scripts/allowance-cashout-smoke.mjs",
+    "test:family-tasks-smoke": "node scripts/family-tasks-smoke.mjs",
     "test:invite-accept-smoke": "node scripts/invite-acceptance-smoke.mjs",
     "sb:start": "supabase start",
     "sb:stop": "supabase stop",
@@ -39,6 +40,7 @@
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "web-push": "^3.6.7",
     "yahoo-finance2": "^3.15.2"
   },
   "devDependencies": {
@@ -46,6 +48,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "supabase": "^2.89.1",

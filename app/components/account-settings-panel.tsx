@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { FAMILY_UPDATED_EVENT } from "@/lib/family-events";
 import PrimaryButton from "@/app/components/ui/primary-button";
 import SecondaryButton from "@/app/components/ui/secondary-button";
+import PushNotificationSettings from "@/app/components/push-notification-settings";
 
 type AccountState = {
   loading: boolean;
@@ -210,6 +211,9 @@ export default function AccountSettingsPanel() {
             </form>
           </section>
         ) : null}
+
+        {/* Push notification settings */}
+        <PushNotificationSettings />
 
         {/* Withdraw — guardian_admin only */}
         {isGuardianAdmin ? (
