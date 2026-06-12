@@ -52,7 +52,34 @@ type TaskRow = {
   recurrence: string;
   status: string;
   requires_confirmation: boolean;
+  completed_at: string | null;
 };
+
+// 繰り返しタスクが「今の期間（毎日=同日 / 毎週=同週）にすでに完了済み」か。
+// DB側 family_task_completed_this_period と同じ判定をUI表示用に行う（権威はDB）。
+function completedThisPeriod(completedAt: string | null, recurrence: string): boolean {
+  if (!completedAt) return false;
+  const c = new Date(completedAt);
+  if (Number.isNaN(c.getTime())) return false;
+  const now = new Date();
+  if (recurrence === "daily") {
+    return (
+      c.getFullYear() === now.getFullYear() &&
+      c.getMonth() === now.getMonth() &&
+      c.getDate() === now.getDate()
+    );
+  }
+  if (recurrence === "weekly") {
+    const weekStart = (d: Date) => {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); // 月曜起点
+      return x.getTime();
+    };
+    return weekStart(c) === weekStart(now);
+  }
+  return false;
+}
 
 type HomeState = {
   loading: boolean;
@@ -820,6 +847,15 @@ export default function HomeDashboard() {
   const childTasks: FamilyTaskTodo[] = isChild
     ? state.tasks
         .filter((t) => t.child_user_id === state.userId && (t.status === "open" || t.status === "submitted"))
+        // 繰り返しタスクは今の期間に完了済みなら次回まで非表示（1日1回 等）
+        .filter(
+          (t) =>
+            !(
+              t.status === "open" &&
+              (t.recurrence === "daily" || t.recurrence === "weekly") &&
+              completedThisPeriod(t.completed_at, t.recurrence)
+            )
+        )
         .map((t) => ({
           id: t.id,
           title: t.title,

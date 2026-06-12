@@ -380,6 +380,12 @@ try {
   }
   assert(grantCount2 === 2, `Expected 2 reward grants after recurring approval, got ${grantCount2}`);
 
+  // 1日1回ガード: 承認直後（同日）に子が再提出しようとしても拒否される
+  const { error: reSubmitError } = await childClient.rpc("submit_family_task_completion", {
+    target_task_id: dailyTaskId,
+  });
+  assert(reSubmitError, "Daily recurring task must not be re-submittable on the same day");
+
   console.log("Family tasks smoke test passed.");
   process.exit(0);
 } catch (error) {
