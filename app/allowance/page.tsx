@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import AppHeader from "@/app/components/app-header";
 import AuthGuard from "@/app/components/auth-guard";
-import AllowanceGrantsPanel from "@/app/components/allowance-grants-panel";
+import AllowanceTasksTabs from "@/app/components/allowance-tasks-tabs";
 import FooterNav from "@/app/components/ui/footer-nav";
 import PageContainer from "@/app/components/ui/page-container";
 
 export const metadata: Metadata = {
-  title: "お小遣い | ミラマネ",
+  title: "タスク・お小遣い | ミラマネ",
 };
 
 export default function AllowancePage() {
@@ -16,9 +16,9 @@ export default function AllowancePage() {
       <AuthGuard />
       <AppHeader />
       <PageContainer>
-        {/* Suspense required because AllowanceGrantsPanel uses useSearchParams */}
+        {/* Suspense required because the tabs/panel use useSearchParams */}
         <Suspense>
-          <AllowanceGrantsPanel />
+          <AllowanceTasksTabs />
         </Suspense>
         {/* Spacer for fixed FooterNav */}
         <div className="h-16" />

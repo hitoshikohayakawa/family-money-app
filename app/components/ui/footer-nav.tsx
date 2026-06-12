@@ -94,7 +94,8 @@ export default function FooterNav() {
 
   const navItems: NavItem[] = [
     { href: "/", label: "ホーム" },
-    { href: "/allowance", label: "お小遣い" },
+    // 親はタスクとお小遣いの統合管理画面。子どもは自分のお小遣い閲覧のみ。
+    { href: "/allowance", label: isChild ? "お小遣い" : "タスク・お小遣い" },
     { href: "/news", label: "ニュース", matchPrefix: true },
     { href: "/charts", label: "チャート", matchPrefix: true },
     ...(isChild

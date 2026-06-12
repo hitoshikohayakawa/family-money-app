@@ -917,7 +917,7 @@ export default function HomeDashboard() {
       iconColor: "text-[var(--warning)]",
       title: "やることの承認まちがあります",
       description: `${submittedTasksForGuardian.length}件が完了報告されています`,
-      href: "/tasks",
+      href: "/allowance?tab=task",
     });
   }
   // 子どもの未決定お小遣いは、上部の「やること」カード(HomeTodoCard)で
@@ -973,7 +973,7 @@ export default function HomeDashboard() {
     ...(isGuardian
       ? [
           {
-            href: "/tasks",
+            href: "/allowance?tab=task",
             label: "やること設定",
             icon: <IconTasks />,
             iconBg: "bg-[rgba(228,163,94,0.12)]",
