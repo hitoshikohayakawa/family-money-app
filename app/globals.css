@@ -67,7 +67,8 @@ html {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100vh; /* fallback */
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 12% 16%, rgba(76, 163, 104, 0.2), transparent 22%),
     radial-gradient(circle at 88% 12%, rgba(241, 226, 174, 0.24), transparent 24%),

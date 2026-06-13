@@ -68,9 +68,12 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${roundedSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${roundedSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      {/* html を固定高にしない（min-height は globals の body 側で 100dvh 指定）。
+          iOS standalone PWA で position:fixed のフッターがスクロール時に
+          下端へ追従しなくなる問題を防ぐため、ウィンドウをスクローラにする。 */}
+      <body className="flex flex-col">{children}</body>
     </html>
   );
 }

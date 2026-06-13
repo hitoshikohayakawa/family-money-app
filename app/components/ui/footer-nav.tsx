@@ -105,7 +105,7 @@ export default function FooterNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-soft)] bg-[rgba(248,252,246,0.95)] backdrop-blur-xl">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-soft)] bg-[rgba(248,252,246,0.95)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1120px] justify-around py-1">
         {navItems.map(({ href, label, matchPrefix }) => {
           const active = isActive(href, matchPrefix);

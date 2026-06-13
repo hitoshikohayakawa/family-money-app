@@ -48,8 +48,8 @@ export function buildCampaignEmailHtml(
   const imageRow = imageUrl
     ? `<!-- Image -->
         <tr>
-          <td style="padding:0;line-height:0">
-            <img src="${escapeHtml(imageUrl)}" alt="ミラマネからのお知らせ" style="display:block;width:100%;max-width:600px;height:auto" />
+          <td align="center" style="padding:0;line-height:0;text-align:center">
+            <img src="${escapeHtml(imageUrl)}" alt="ミラマネからのお知らせ" width="600" style="display:block;width:100%;max-width:600px;height:auto;margin:0 auto;border:0;outline:none" />
           </td>
         </tr>`
     : "";
