@@ -50,32 +50,32 @@ export default function LpAnnouncements() {
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
-      <div className="mx-auto w-full max-w-6xl">
+    <section className="px-5 pb-14">
+      <div className="mx-auto w-full max-w-[1040px]">
         <div className="text-center">
-          <span className="inline-flex rounded-full bg-[#E8F5E9] px-4 py-2 text-xs font-extrabold tracking-[0.18em] text-[#378C41]">
+          <span className="inline-flex rounded-full bg-[#EAF6EF] px-4 py-2 text-xs font-extrabold tracking-[0.18em] text-[#1E6B43]">
             アップデート情報
           </span>
-          <h2 className="mt-5 text-3xl font-black leading-tight text-[#1F2D20] sm:text-4xl">
+          <h2 className="mt-4 text-[24px] font-bold leading-tight text-[#1F2A23]">
             ミラマネは、
-            <span className="text-[#4BAF57]">少しずつ進化</span>
+            <span className="text-[#2E9E63]">少しずつ進化</span>
             しています
           </h2>
         </div>
         {/* 1〜2件でも中央寄せにせず左詰め。md以上で3カラム・カード高さは揃える */}
-        <div className="mt-9 grid items-stretch gap-5 md:grid-cols-3">
+        <div className="mt-9 grid items-stretch gap-4 sm:grid-cols-2 md:grid-cols-3">
           {items.map((item) => (
             <article
               key={item.id}
-              className="flex h-full flex-col rounded-[26px] border border-[rgba(55,140,65,0.12)] bg-white p-6 shadow-[0_18px_44px_rgba(75,175,87,0.10)]"
+              className="flex h-full flex-col rounded-[16px] bg-white p-5 shadow-[0_2px_8px_rgba(31,42,35,0.06)]"
             >
-              <time className="text-xs font-bold tracking-wide text-[#8AA08C]">
+              <time className="text-xs font-bold tracking-wide text-[#6B7B72]">
                 {formatDate(item.published_at)}
               </time>
-              <h3 className="mt-3 text-lg font-extrabold leading-7 text-[#1F2D20]">
+              <h3 className="mt-3 text-[15px] font-bold leading-7 text-[#1F2A23]">
                 {item.title}
               </h3>
-              <p className="mt-3 line-clamp-3 text-sm leading-7 text-[#516251]">
+              <p className="mt-3 line-clamp-3 text-[13px] leading-7 text-[#6B7B72]">
                 {item.body}
               </p>
             </article>

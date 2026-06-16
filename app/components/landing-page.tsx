@@ -1,65 +1,55 @@
+import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  BookOpen,
-  Brain,
-  Car,
   Check,
   ClipboardList,
   Coins,
-  Gamepad2,
-  GitFork,
-  Globe,
+  Gift,
   LineChart,
   ListChecks,
-  Music,
   Newspaper,
-  Search,
-  Smartphone,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { LegalLinks } from "@/app/components/ui/legal-links";
 import LpAnnouncements from "@/app/components/lp-announcements";
 
-// ─── 生成イラストの差し替えスイッチ ──────────────────────────────────────────
-// Codex CLI imagegen で /public/images/lp/generated/ に PNG を生成したら、
-// この値を true にするだけで、各セクションの lucide アイコンが生成PNGに切り替わる。
-// （PNG未生成の現状は false = lucide アイコンで表示。絵文字は一切使わない）
-const USE_GENERATED_ILLUSTRATIONS: boolean = true;
+// ─── デザイントークン（design.md / famimane-design-md 準拠）──────────────────
+// このLP配下だけに適用する CSS 変数。globals.css（アプリ全体）には触れない。
+// クラスからは bg-[var(--green-600)] / text-[var(--ink-900)] のように参照する。
+const TOKENS = {
+  "--green-50": "#EAF6EF",
+  "--green-100": "#D3ECDD",
+  "--green-200": "#A9DABF",
+  "--green-300": "#7FC79F",
+  "--green-400": "#54B27D",
+  "--green-500": "#2E9E63",
+  "--green-600": "#258552",
+  "--green-700": "#1E6B43",
+  "--green-800": "#14512F",
+  "--amber-50": "#FDF6E6",
+  "--amber-100": "#FBEBC4",
+  "--amber-300": "#F4CE78",
+  "--amber-400": "#EFB23F",
+  "--amber-500": "#E5972A",
+  "--sky-100": "#DCEEF6",
+  "--sky-400": "#5BB4D6",
+  "--sky-600": "#2E7C9E",
+  "--ink-900": "#1F2A23",
+  "--ink-700": "#3A463E",
+  "--ink-500": "#6B7B72",
+  "--ink-300": "#A7B2AB",
+  "--line": "#E3EAE5",
+  "--base": "#F4F8F5",
+  "--surface": "#FFFFFF",
+  "--danger": "#E5654B",
+  "--sh-card": "0 2px 8px rgba(31,42,35,0.06)",
+  "--sh-float": "0 6px 20px rgba(31,42,35,0.10)",
+  "--sh-pop": "0 10px 30px rgba(46,158,99,0.18)",
+} as CSSProperties;
 
-// アイコン枠。生成PNGがあればそれを、無ければ lucide アイコンを表示する。
-function Illustration({
-  src,
-  Icon,
-  boxClassName = "",
-  iconClassName = "",
-}: {
-  src: string;
-  Icon: LucideIcon;
-  boxClassName?: string;
-  iconClassName?: string;
-}) {
-  return (
-    <span className={`flex items-center justify-center ${boxClassName}`}>
-      {USE_GENERATED_ILLUSTRATIONS ? (
-        <Image
-          src={src}
-          alt=""
-          aria-hidden
-          width={512}
-          height={512}
-          className="h-full w-full object-contain"
-        />
-      ) : (
-        <Icon className={iconClassName} strokeWidth={1.6} aria-hidden />
-      )}
-    </span>
-  );
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── 共通パーツ ────────────────────────────────────────────────────────────
 
 function MarketingButton({
   href,
@@ -68,517 +58,536 @@ function MarketingButton({
   className = "",
 }: {
   href: string;
-  children: React.ReactNode;
-  variant?: "primary" | "secondary" | "ghost";
+  children: ReactNode;
+  variant?: "primary" | "secondary" | "reward" | "ghost";
   className?: string;
 }) {
   const variantClass =
     variant === "primary"
-      ? "bg-[#4BAF57] text-white shadow-[0_16px_40px_rgba(75,175,87,0.24)] hover:bg-[#378C41]"
-      : variant === "secondary"
-        ? "border border-[rgba(55,140,65,0.16)] bg-white text-[#1F2D20] hover:border-[rgba(55,140,65,0.32)] hover:bg-[#F4FAF5]"
-        : "border border-[rgba(75,175,87,0.45)] bg-transparent text-[#378C41] hover:bg-[#E8F5E9]";
+      ? "bg-[var(--green-600)] text-white shadow-[var(--sh-pop)] hover:bg-[var(--green-700)]"
+      : variant === "reward"
+        ? "bg-[var(--amber-500)] text-white hover:brightness-[0.96]"
+        : variant === "secondary"
+          ? "bg-white text-[var(--green-600)] border-[1.5px] border-[var(--green-200)] hover:bg-[var(--green-50)]"
+          : "bg-transparent text-white border-[1.5px] border-white/60 hover:bg-white/10";
   return (
     <Link
       href={href}
-      className={`inline-flex min-h-12 items-center justify-center rounded-full px-6 py-3 text-sm font-bold transition duration-200 ${variantClass} ${className}`}
+      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-[12px] px-7 text-[15px] font-bold transition duration-150 ${variantClass} ${className}`}
     >
       {children}
     </Link>
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// セクション見出し（左右に短い緑のライン）
+function SectionHead({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex rounded-full bg-[#E8F5E9] px-4 py-2 text-xs font-extrabold tracking-[0.18em] text-[#378C41]">
+    <h2 className="flex items-center justify-center gap-3 text-center text-[24px] font-bold text-[var(--green-600)]">
+      <span aria-hidden className="h-0.5 w-6 rounded-full bg-[var(--green-300)]" />
       {children}
-    </span>
+      <span aria-hidden className="h-0.5 w-6 rounded-full bg-[var(--green-300)]" />
+    </h2>
   );
 }
 
-function MarketingSection({
-  id,
-  className = "",
-  children,
-}: {
-  id?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
+function SectionSub({ children }: { children: ReactNode }) {
   return (
-    <section id={id} className={`px-5 py-12 sm:px-8 lg:px-10 lg:py-16 ${className}`}>
-      <div className="mx-auto w-full max-w-6xl">{children}</div>
-    </section>
+    <p className="mt-3 text-center text-[14px] text-[var(--ink-500)]">{children}</p>
   );
 }
 
-// スマホ画面スクリーンショットを並べる枠（画面そのものは作り直さない）
-function PhoneFrame({
+// イラスト枠（対応する実PNGを表示。装飾用途のため alt は空）
+function Illust({
   src,
-  alt,
   className = "",
+  imgClassName = "object-contain",
 }: {
   src: string;
-  alt: string;
   className?: string;
+  imgClassName?: string;
 }) {
   return (
-    <div className={`flex justify-center ${className}`}>
-      <div className="w-full max-w-[380px] rounded-[40px] border border-[rgba(31,45,32,0.08)] bg-[linear-gradient(180deg,#FFFFFF_0%,#F4FAF5_100%)] p-3 shadow-[0_36px_80px_rgba(31,45,32,0.16)] sm:p-4">
-        <div className="overflow-hidden rounded-[30px] bg-white">
-          <Image
-            src={src}
-            alt={alt}
-            width={540}
-            height={1080}
-            className="h-auto w-full object-contain"
-          />
-        </div>
-      </div>
-    </div>
+    <span className={`flex items-center justify-center overflow-hidden ${className}`}>
+      <Image
+        src={src}
+        alt=""
+        aria-hidden
+        width={256}
+        height={256}
+        className={`h-full w-full ${imgClassName}`}
+      />
+    </span>
   );
 }
 
 // ─── データ ────────────────────────────────────────────────────────────────
 
+const HERO_FEATURES: { Icon: LucideIcon; label: string; bg: string; stroke: string }[] = [
+  { Icon: ClipboardList, label: "お手伝い", bg: "var(--green-100)", stroke: "var(--green-500)" },
+  { Icon: Coins, label: "おこづかい", bg: "var(--amber-100)", stroke: "var(--amber-500)" },
+  { Icon: LineChart, label: "投資", bg: "var(--green-100)", stroke: "var(--green-500)" },
+  { Icon: Newspaper, label: "ニュース", bg: "var(--sky-100)", stroke: "var(--sky-400)" },
+];
+
 const PROBLEMS = [
-  { img: "/images/lp/generated/problem-allowance.png", Icon: Wallet, text: "おこづかいを渡しているけど、\n学びにつながっているか分からない" },
-  { img: "/images/lp/generated/problem-investment.png", Icon: Search, text: "投資やお金の話を、\nどう伝えたらいいか分からない" },
-  { img: "/images/lp/generated/problem-task.png", Icon: ListChecks, text: "お手伝いや宿題を、\n前向きに続けてほしい" },
+  { img: "/images/lp/generated/problem-allowance.png", title: "おこづかい、どう渡す？", desc: "金額や渡し方に迷う。記録もつい忘れてしまう。" },
+  { img: "/images/lp/generated/problem-investment.png", title: "投資ってむずかしそう", desc: "子どもにどう教えればいいか分からない。" },
+  { img: "/images/lp/generated/problem-task.png", title: "お手伝いが続かない", desc: "ごほうびにしても、なかなか定着しない。" },
 ];
 
-const FLOW_STEPS: { step: string; title: string; desc: string; img: string; Icon: LucideIcon }[] = [
-  { step: "01", title: "やる", desc: "お手伝いや宿題を、親子でタスクにする", img: "/images/lp/generated/flow-do.png", Icon: ClipboardList },
-  { step: "02", title: "もらう", desc: "できたら、ごほうびとしておこづかい", img: "/images/lp/generated/flow-receive.png", Icon: Coins },
-  { step: "03", title: "選ぶ", desc: "すぐにもらう？ 投資にまわす？", img: "/images/lp/generated/flow-choose.png", Icon: GitFork },
-  { step: "04", title: "学ぶ", desc: "ニュースやチャートで、お金の動きを知る", img: "/images/lp/generated/flow-learn.png", Icon: BookOpen },
+const FLOW_STEPS = [
+  { num: "1", img: "/images/lp/generated/flow-do.png", title: "お手伝いをタスクにする", desc: "お手伝いや宿題を、タスクとして登録！" },
+  { num: "2", img: "/images/lp/generated/flow-receive.png", title: "おこづかいを渡す", desc: "タスクができたら、ごほうびのおこづかい！" },
+  { num: "3", img: "/images/lp/generated/flow-choose.png", title: "投資先を選ぶ", desc: "もらったおこづかいを、投資にまわすことも！" },
+  { num: "4", img: "/images/lp/generated/flow-learn.png", title: "ニュースやチャートで学ぶ", desc: "やさしい解説で、お金や投資の知識が身につく！" },
 ];
 
-const INVEST_THEMES = [
-  { img: "/images/lp/generated/invest-theme-game.png", Icon: Gamepad2, label: "ゲーム" },
-  { img: "/images/lp/generated/invest-theme-car.png", Icon: Car, label: "自動車" },
-  { img: "/images/lp/generated/invest-theme-global.png", Icon: Globe, label: "世界企業" },
-  { img: "/images/lp/generated/invest-theme-entertainment.png", Icon: Music, label: "エンタメ" },
-  { img: "/images/lp/generated/invest-theme-tech.png", Icon: Smartphone, label: "テクノロジー" },
+const JOURNEY = [
+  { img: "/images/character/mirakun-study.png", label: "お手伝い・宿題をする" },
+  { img: "/images/character/mirakun-money.png", label: "おこづかいをもらう" },
+  { img: "/images/character/mirakun-chart.png", label: "投資やニュースで学ぶ！" },
 ];
 
-const INVEST_POINTS: { Icon: LucideIcon; t: string; d: string }[] = [
-  { Icon: LineChart, t: "値動きを見る", d: "上がる・下がるを体感する" },
-  { Icon: Brain, t: "なぜ動くか考える", d: "理由を親子で話し合う" },
-  { Icon: Newspaper, t: "ニュースを読む", d: "社会のしくみを知る" },
+const THEMES = [
+  { img: "/images/lp/generated/invest-theme-car.png", label: "自動車" },
+  { img: "/images/lp/generated/invest-theme-entertainment.png", label: "エンタメ" },
+  { img: "/images/lp/generated/invest-theme-game.png", label: "ゲーム" },
+  { img: "/images/lp/generated/invest-theme-global.png", label: "世界企業" },
+  { img: "/images/lp/generated/invest-theme-tech.png", label: "テクノロジー" },
 ];
 
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#F4FAF5_0%,#FFFFFF_14%,#FFFFFF_100%)] text-[#1F2D20]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[rgba(55,140,65,0.10)] bg-[rgba(255,255,255,0.9)] backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-4 sm:px-8 lg:px-10">
-          <Link href="/" className="flex items-center gap-3">
+    <div
+      style={TOKENS}
+      className="min-h-screen bg-[var(--base)] font-sans text-[var(--ink-700)]"
+    >
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex h-[68px] w-full max-w-[1040px] items-center justify-between px-5">
+          <Link href="/" className="flex items-center">
             <Image
               src="/assets/lp/logo.png"
               alt="ミラマネ"
               width={180}
               height={54}
-              className="h-10 w-auto sm:h-12"
+              className="h-9 w-auto sm:h-10"
               priority
             />
           </Link>
-          <div className="hidden items-center gap-3 sm:flex">
-            <MarketingButton href="/login" variant="secondary" className="min-h-11 px-5">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="hidden text-[14px] font-medium text-[var(--ink-700)] transition hover:text-[var(--green-600)] sm:inline"
+            >
               ログイン
-            </MarketingButton>
-            <MarketingButton href="/register" variant="primary" className="min-h-11 px-5">
+            </Link>
+            <MarketingButton href="/register" variant="primary" className="min-h-10 px-5 text-[14px]">
               無料ではじめる
-            </MarketingButton>
-          </div>
-          {/* Mobile header buttons */}
-          <div className="flex items-center gap-2 sm:hidden">
-            <MarketingButton href="/login" variant="secondary" className="min-h-10 px-4 text-xs">
-              ログイン
-            </MarketingButton>
-            <MarketingButton href="/register" variant="primary" className="min-h-10 px-4 text-xs">
-              登録
             </MarketingButton>
           </div>
         </div>
       </header>
 
       <main>
-        {/* 01 HERO ── hero-visual.png にコピー・ミラくん・UI・¥0が含まれるため、
-            同じコピーをHTML側で重複表示しない。画像の下にCTAと無料訴求のみ置く。 */}
-        <MarketingSection className="overflow-hidden pb-8 pt-6 sm:pt-8 lg:pb-10 lg:pt-10">
-          <div className="overflow-hidden rounded-[36px] border border-[rgba(75,175,87,0.16)] bg-white shadow-[0_44px_100px_rgba(75,175,87,0.22)]">
+        {/* 01 HERO ── miramane-lp-hero.png を背景に、コピーをオーバーレイ。
+            lg+: 画像を全面背景にして左側にコピー（左→右の明スクリムで可読性確保）。
+            〜lg: 画像の右側を上部バナーで見せ、下段にコピーを縦積み（添付の挙動）。 */}
+        <section className="relative isolate overflow-hidden bg-[linear-gradient(180deg,var(--green-50)_0%,var(--base)_100%)]">
+          {/* デスクトップ：画像を中央寄せ max-w-[1040px] コンテナ内に閉じ込める。
+              右端は下の「お悩み」3カードの右端と揃い、これより右へは追随しない。
+              object-contain なので上下も切れない。+ 左スクリムでコピーを可読に。 */}
+          <div aria-hidden className="absolute inset-0 hidden lg:block">
+            <div className="relative mx-auto h-full w-full max-w-[1040px] px-5">
+              <Image
+                src="/images/lp/miramane-lp-hero.png"
+                alt=""
+                fill
+                sizes="1040px"
+                priority
+                className="object-contain object-right"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--base)_0%,rgba(244,248,245,0.78)_24%,rgba(244,248,245,0)_50%)]" />
+            </div>
+          </div>
+
+          {/* モバイル/タブレット：上部バナー。被写体（ミラくん＋スマホ＋¥0）が
+              ある右側だけを切り出して表示する（縦横比固定 + 右寄せクロップ）。 */}
+          <div className="relative aspect-[6/5] w-full overflow-hidden lg:hidden">
             <Image
-              src="/images/lp/hero-visual.png"
-              alt="家族でお金を学ぶマネーリテラシーアプリ「ミラマネ」。お金の大切さを、親子で楽しく学ぼう。"
-              width={1600}
-              height={900}
-              className="h-auto w-full object-contain"
+              src="/images/lp/miramane-lp-hero.png"
+              alt="家族でお金を学ぶマネーリテラシーアプリ「ミラマネ」のイメージ。ミラくんとアプリ画面。"
+              fill
               priority
+              sizes="100vw"
+              className="object-cover object-right"
             />
           </div>
 
-          <div className="mt-7 flex flex-col items-center gap-5">
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <MarketingButton href="/register" variant="primary" className="min-h-14 px-12 text-base">
-                無料ではじめる
-              </MarketingButton>
-              <MarketingButton href="/login" variant="secondary" className="min-h-14 px-12 text-base">
-                ログイン
-              </MarketingButton>
-            </div>
-            <ul className="flex flex-wrap items-center justify-center gap-2.5">
-              {["登録無料", "利用料無料", "広告表示なし"].map((item) => (
-                <li
-                  key={item}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#E8F5E9] px-4 py-2 text-sm font-bold text-[#1F2D20]"
-                >
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#4BAF57] text-white">
-                    <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </MarketingSection>
+          {/* コピー */}
+          <div className="relative mx-auto w-full max-w-[1040px] px-5 pb-12 pt-7 lg:min-h-[540px] lg:py-20">
+            <div className="lg:max-w-[510px]">
+              <span className="inline-block rounded-full bg-[var(--green-100)] px-4 py-1.5 text-[13px] font-semibold text-[var(--green-700)]">
+                家族でお金を学ぶ マネーリテラシーアプリ
+              </span>
+              <h1 className="mt-4 text-[32px] font-bold leading-[1.32] tracking-[-0.01em] text-[var(--ink-900)] sm:text-[42px]">
+                お金の<span className="text-[var(--green-500)]">大切さ</span>を、
+                <br />
+                親子で<span className="text-[var(--amber-500)]">楽しく学</span>ぼう。
+              </h1>
 
-        {/* 02 共感セクション ── アイコンは lucide / 生成PNGに自動切替。高さを抑え2行に */}
-        <MarketingSection className="pt-4 lg:pt-6">
-          <div className="text-center">
-            <SectionLabel>こんなお悩み</SectionLabel>
-            <h2 className="mt-5 text-3xl font-black leading-tight text-[#1F2D20] sm:text-4xl">
-              こんなお悩み、ありませんか？
-            </h2>
-          </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {PROBLEMS.map((card) => (
-              <article
-                key={card.text}
-                className="flex items-center gap-4 rounded-[22px] border border-[rgba(55,140,65,0.12)] bg-white p-5 shadow-[0_14px_36px_rgba(75,175,87,0.08)]"
-              >
-                <Illustration
-                  src={card.img}
-                  Icon={card.Icon}
-                  boxClassName="h-14 w-14 shrink-0 rounded-2xl bg-[#F4FAF5]"
-                  iconClassName="h-7 w-7 text-[#4BAF57]"
-                />
-                <p className="whitespace-pre-line text-sm font-bold leading-7 text-[#1F2D20]">
-                  {card.text}
-                </p>
-              </article>
-            ))}
-          </div>
-        </MarketingSection>
-
-        {/* 03 お手伝いが学びに変わる（主役・体験フロー）
-            PC: 横4カード＋矢印 / モバイル: コンパクトなタイムライン */}
-        <MarketingSection className="bg-[#F7FBF7]">
-          <div className="text-center">
-            <SectionLabel>ミラマネでできること</SectionLabel>
-            <h2 className="mt-5 text-3xl font-black leading-tight text-[#1F2D20] sm:text-[2.6rem]">
-              お手伝いが、
-              <span className="text-[#4BAF57]">学びに変わる</span>
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-8 text-[#516251] sm:text-base">
-              「やる → もらう → 選ぶ → 学ぶ」。ひとつの体験の流れとしてつながっています。
-            </p>
-          </div>
-
-          {/* PC: 横並びカード＋矢印 */}
-          <div className="mt-9 hidden items-stretch gap-2 lg:flex">
-            {FLOW_STEPS.map((s, i) => (
-              <div key={s.step} className="flex flex-1 items-stretch">
-                <article className="flex flex-1 flex-col items-center rounded-[24px] border border-[rgba(55,140,65,0.14)] bg-white p-6 text-center shadow-[0_18px_44px_rgba(75,175,87,0.10)]">
-                  <Illustration
-                    src={s.img}
-                    Icon={s.Icon}
-                    boxClassName="h-16 w-16 rounded-2xl bg-[#E8F5E9]"
-                    iconClassName="h-8 w-8 text-[#378C41]"
-                  />
-                  <span className="mt-4 inline-flex h-7 items-center rounded-full bg-[#4BAF57] px-3 text-xs font-black text-white">
-                    STEP {s.step}
-                  </span>
-                  <h3 className="mt-3 text-xl font-black text-[#1F2D20]">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-[#516251]">{s.desc}</p>
-                </article>
-                {i < FLOW_STEPS.length - 1 && (
-                  <div className="flex items-center px-1 text-[#4BAF57]" aria-hidden>
-                    <ArrowRight className="h-6 w-6" strokeWidth={2.4} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* モバイル: コンパクトなタイムライン */}
-          <ol className="mt-8 space-y-3 lg:hidden">
-            {FLOW_STEPS.map((s) => (
-              <li
-                key={s.step}
-                className="flex items-center gap-3 rounded-[20px] border border-[rgba(55,140,65,0.14)] bg-white p-3.5 shadow-[0_12px_30px_rgba(75,175,87,0.08)]"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4BAF57] text-sm font-black text-white">
-                  {s.step}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-black text-[#1F2D20]">{s.title}</h3>
-                  <p className="mt-0.5 text-xs leading-5 text-[#516251]">{s.desc}</p>
-                </div>
-                <Illustration
-                  src={s.img}
-                  Icon={s.Icon}
-                  boxClassName="h-11 w-11 shrink-0 rounded-xl bg-[#E8F5E9]"
-                  iconClassName="h-6 w-6 text-[#378C41]"
-                />
-              </li>
-            ))}
-          </ol>
-        </MarketingSection>
-
-        {/* 04 タスク機能 ── モバイルは テキスト→画像 の順 */}
-        <MarketingSection>
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div>
-              <SectionLabel>タスク機能</SectionLabel>
-              <h2 className="mt-5 text-3xl font-black leading-tight text-[#1F2D20] sm:text-4xl">
-                お手伝いを、
-                <span className="text-[#4BAF57]">タスクにできる</span>
-              </h2>
-              <p className="mt-4 text-sm leading-8 text-[#516251] sm:text-base">
-                宿題やお皿洗い、お風呂掃除など、家庭のやることを登録。
-                できたらおこづかいを渡せるので、お手伝いが自然と習慣になります。
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                {["宿題をする", "お皿洗い", "お風呂掃除", "ゴミ出し"].map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(75,175,87,0.18)] bg-white px-4 py-2 text-sm font-bold text-[#1F2D20] shadow-[0_10px_24px_rgba(75,175,87,0.08)]"
-                  >
-                    <Check className="h-4 w-4 text-[#4BAF57]" strokeWidth={3} aria-hidden />
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <PhoneFrame src="/images/lp/lp-phone-task.png" alt="ミラマネのタスク機能の画面" />
-          </div>
-        </MarketingSection>
-
-        {/* 05 おこづかい体験 */}
-        <MarketingSection className="bg-[#F7FBF7]">
-          <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-            <div className="flex justify-center">
-              <Image
-                src="/images/character/mirakun-money.png"
-                alt="おこづかいを持ったミラくん"
-                width={460}
-                height={460}
-                className="h-auto w-full max-w-[320px] object-contain sm:max-w-[380px]"
-              />
-            </div>
-            <div>
-              <SectionLabel>おこづかい体験</SectionLabel>
-              <h2 className="mt-5 text-3xl font-black leading-tight text-[#1F2D20] sm:text-4xl">
-                おこづかいを渡して、
-                <span className="text-[#4BAF57]">終わらない</span>
-              </h2>
-              <p className="mt-4 text-sm leading-8 text-[#516251] sm:text-base">
-                受け取ったおこづかいを「いま使う」のか「投資してみる」のか、子どもが自分で考えて選びます。
-                選ぶこと自体が、お金との付き合い方を学ぶ第一歩になります。
-              </p>
-              <div className="mt-6 rounded-[24px] border border-[rgba(75,175,87,0.14)] bg-white px-5 py-5 text-sm leading-8 text-[#516251] shadow-[0_14px_34px_rgba(75,175,87,0.08)]">
-                サービス内にお金を預ける仕組みではありません。子どもの申請を受けて、
-                <strong className="font-bold text-[#1F2D20]">親が直接お金を渡して完了</strong>
-                するので、家庭のペースで安心して使えます。
-              </div>
-            </div>
-          </div>
-        </MarketingSection>
-
-        {/* 06 投資体験 ── モバイルは テキスト→画像。3カードは lucide アイコン */}
-        <MarketingSection>
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div>
-              <SectionLabel>投資体験</SectionLabel>
-              <h2 className="mt-5 text-3xl font-black leading-tight text-[#1F2D20] sm:text-4xl">
-                投資は、
-                <span className="text-[#4BAF57]">学びの選択肢</span>
-              </h2>
-              <p className="mt-4 text-sm leading-8 text-[#516251] sm:text-base">
-                ミラマネの投資は、儲けるためのものではありません。値動きを見て、なぜ動くのかを考え、
-                お金や社会のしくみを学ぶための、教育目的のシミュレーションです。
-              </p>
-              <div className="mt-6 grid grid-cols-3 gap-3">
-                {INVEST_POINTS.map((p) => (
-                  <div
-                    key={p.t}
-                    className="rounded-[22px] border border-[rgba(75,175,87,0.12)] bg-white px-3 py-4 text-center shadow-[0_12px_30px_rgba(75,175,87,0.08)]"
-                  >
-                    <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E8F5E9]">
-                      <p.Icon className="h-6 w-6 text-[#378C41]" strokeWidth={1.6} aria-hidden />
+              <div className="mt-6 flex flex-wrap gap-4">
+                {HERO_FEATURES.map(({ Icon, label, bg, stroke }) => (
+                  <div key={label} className="flex items-center gap-2 text-[14px] font-semibold text-[var(--ink-700)]">
+                    <span
+                      className="flex h-8 w-8 items-center justify-center rounded-[10px]"
+                      style={{ background: bg }}
+                    >
+                      <Icon className="h-[18px] w-[18px]" style={{ color: stroke }} strokeWidth={1.8} aria-hidden />
                     </span>
-                    <p className="mt-2 text-sm font-extrabold leading-5 text-[#1F2D20]">{p.t}</p>
-                    <p className="mt-1 text-xs leading-5 text-[#516251]">{p.d}</p>
+                    {label}
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-5 text-[15px] leading-7 text-[var(--ink-700)]">
+                お手伝い・宿題・おこづかい・投資・ニュース。
+                <br className="hidden sm:block" />
+                親子の日常から、お金を学ぶきっかけをつくります。
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3.5">
+                <MarketingButton href="/register" variant="primary" className="min-h-13 px-7 text-base">
+                  ¥0&nbsp;&nbsp;無料ではじめる
+                </MarketingButton>
+                <MarketingButton href="/login" variant="secondary" className="min-h-13 px-7 text-base">
+                  ログイン
+                </MarketingButton>
+              </div>
+              <p className="mt-3.5 text-[12px] tracking-wider text-[var(--ink-500)]">
+                ＼ 登録も利用もすべて無料！ ／
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 02 PROBLEM */}
+        <section className="py-14">
+          <div className="mx-auto w-full max-w-[1040px] px-5">
+            <SectionHead>こんなお悩み、ありませんか？</SectionHead>
+            <SectionSub>
+              ミラマネは、親子のお金にまつわる「困った」をいっしょに解決します。
+            </SectionSub>
+            <div className="mt-9 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+              {PROBLEMS.map((p) => (
+                <article
+                  key={p.title}
+                  className="rounded-[16px] bg-[var(--surface)] p-6 text-center shadow-[var(--sh-card)]"
+                >
+                  <Illust src={p.img} className="mx-auto h-26 w-26 rounded-full bg-[var(--green-50)]" />
+                  <h3 className="mt-4 text-[16px] font-bold text-[var(--ink-900)]">{p.title}</h3>
+                  <p className="mt-2 text-[13.5px] leading-6 text-[var(--ink-500)]">{p.desc}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 03 STEPS */}
+        <section className="pb-14">
+          <div className="mx-auto w-full max-w-[1040px] px-5">
+            <SectionHead>ミラマネでできること</SectionHead>
+            <SectionSub>4つのステップで、お金の学びが自然と身につきます。</SectionSub>
+            <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {FLOW_STEPS.map((s) => (
+                <article
+                  key={s.num}
+                  className="rounded-[16px] bg-[var(--surface)] p-5 shadow-[var(--sh-card)]"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--green-500)] text-[14px] font-bold text-white">
+                    {s.num}
+                  </span>
+                  <Illust src={s.img} className="mt-3 h-24 w-full rounded-[12px] bg-[var(--green-50)]" />
+                  <h3 className="mt-3.5 text-[15px] font-bold leading-snug text-[var(--ink-900)]">{s.title}</h3>
+                  <p className="mt-2 text-[13px] leading-6 text-[var(--ink-500)]">{s.desc}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 04 JOURNEY band */}
+        <section className="pb-14">
+          <div className="mx-auto w-full max-w-[1040px] px-5">
+            <div className="rounded-[28px] bg-[linear-gradient(135deg,var(--green-50),var(--green-100))] px-8 py-9 sm:px-9">
+              <div className="grid items-center gap-7 lg:grid-cols-[0.9fr_2fr]">
+                <div>
+                  <h2 className="text-[24px] font-bold leading-snug text-[var(--ink-900)] sm:text-[26px]">
+                    おこづかいが、
+                    <br />
+                    学びにつながり、
+                    <br />
+                    未来につながる。
+                  </h2>
+                  <p className="mt-3 text-[14px] leading-7 text-[var(--ink-700)]">
+                    親子で「使う・貯める・増やす」を、いっしょに体験しよう。
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  {JOURNEY.map((j, i) => (
+                    <div key={j.label} className="flex flex-1 items-center gap-2.5">
+                      <div className="flex-1 rounded-[16px] bg-white p-4 text-center shadow-[var(--sh-card)]">
+                        <Illust src={j.img} className="mx-auto h-22 w-full" />
+                        <span className="mt-2.5 block text-[12px] font-semibold text-[var(--ink-700)]">
+                          {j.label}
+                        </span>
+                      </div>
+                      {i < JOURNEY.length - 1 && (
+                        <ArrowRight
+                          className="hidden h-5 w-5 shrink-0 text-[var(--green-500)] sm:block"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 05 FEATURES（コードUI） */}
+        <section className="pb-14">
+          <div className="mx-auto w-full max-w-[1040px] px-5">
+            <SectionHead>主な機能</SectionHead>
+            <SectionSub>
+              実際の画面は、こんな感じ。シンプルで、子どもにもわかりやすい設計です。
+            </SectionSub>
+            <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* タスク */}
+              <FeatureCard
+                Icon={ListChecks}
+                title="やること（タスク）"
+                desc="お手伝いや宿題を設定して、できたらおこづかいを渡せます。"
+              >
+                <div className="rounded-[12px] border border-[var(--line)] bg-[var(--base)] p-3">
+                  {[
+                    { t: "リビングを片付ける", rw: "+¥50" },
+                    { t: "お皿を洗う", rw: "+¥100" },
+                    { t: "宿題をする", rw: "+¥150" },
+                  ].map((row) => (
+                    <div
+                      key={row.t}
+                      className="flex items-center gap-2 border-b border-[var(--line)] py-2 text-[12px] text-[var(--ink-700)] last:border-b-0"
+                    >
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--green-500)]">
+                        <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} aria-hidden />
+                      </span>
+                      {row.t}
+                      <span className="ml-auto font-bold text-[var(--green-600)]">{row.rw}</span>
+                    </div>
+                  ))}
+                </div>
+              </FeatureCard>
+
+              {/* チャート */}
+              <FeatureCard
+                Icon={LineChart}
+                title="チャート機能"
+                desc="投資先の値動きを、シンプルなグラフで見える化。気軽にチェック！"
+              >
+                <div className="rounded-[12px] border border-[var(--line)] bg-[var(--base)] p-3">
+                  <p className="text-[11px] text-[var(--ink-500)]">eMAXIS Slim 全世界株式</p>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[18px] font-bold text-[var(--ink-900)]">¥37,147</span>
+                    <span className="text-[11px] font-bold text-[var(--green-600)]">+1.2% ↗︎</span>
+                  </div>
+                  <svg viewBox="0 0 220 64" className="mt-1.5 h-[58px] w-full" aria-hidden>
+                    <polyline
+                      fill="none"
+                      stroke="var(--green-500)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      points="0,50 30,46 60,48 90,36 120,40 150,24 180,26 220,12"
+                    />
+                    <polygon
+                      fill="var(--green-500)"
+                      opacity="0.08"
+                      points="0,50 30,46 60,48 90,36 120,40 150,24 180,26 220,12 220,64 0,64"
+                    />
+                  </svg>
+                </div>
+              </FeatureCard>
+
+              {/* ニュース */}
+              <FeatureCard
+                Icon={Newspaper}
+                title="ミラマネニュース"
+                desc="お金や投資のニュースを、子どもにもわかりやすくお届け！"
+              >
+                <div className="rounded-[12px] border border-[var(--line)] bg-[var(--base)] p-3">
+                  {[
+                    { dot: "var(--amber-400)", t: "ダウ平均が下落？ 投資家のお金はどこへ移動した？" },
+                    { dot: "var(--sky-400)", t: "円高・円安ってどういうこと？ やさしく解説！" },
+                  ].map((n) => (
+                    <div
+                      key={n.t}
+                      className="flex items-start gap-2 border-b border-[var(--line)] py-2 text-[11px] leading-5 text-[var(--ink-700)] last:border-b-0"
+                    >
+                      <span
+                        className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                        style={{ background: n.dot }}
+                      />
+                      {n.t}
+                    </div>
+                  ))}
+                </div>
+              </FeatureCard>
+            </div>
+          </div>
+        </section>
+
+        {/* 06 REWARD + THEMES（amber） */}
+        <section className="pb-14">
+          <div className="mx-auto w-full max-w-[1040px] px-5">
+            <div className="rounded-[20px] bg-[linear-gradient(135deg,var(--amber-50),var(--amber-100))] px-8 py-8">
+              <div className="mb-6 flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[var(--sh-card)]">
+                  <Gift className="h-7 w-7 text-[var(--amber-500)]" strokeWidth={1.8} aria-hidden />
+                </span>
+                <div>
+                  <h3 className="text-[20px] font-bold text-[var(--ink-900)]">
+                    投資先は、これからどんどんアップデート！
+                  </h3>
+                  <p className="mt-1 text-[14px] leading-7 text-[var(--ink-700)]">
+                    身近な会社やテーマを追加予定。子どもの興味に合わせて、学びの幅が広がります。
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                {THEMES.map((t) => (
+                  <div key={t.label} className="rounded-[12px] bg-white/75 p-3.5 text-center">
+                    <Illust src={t.img} className="mx-auto h-14 w-14 rounded-[10px] bg-white" />
+                    <span className="mt-2 block text-[11px] font-semibold text-[var(--ink-700)]">
+                      {t.label}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
-            <PhoneFrame src="/images/lp/lp-phone-chart.png" alt="ミラマネの投資チャート画面" />
           </div>
-        </MarketingSection>
+        </section>
 
-        {/* 07 ニュース体験 ── モバイルは テキスト先行（ラベル→見出し→チップ→説明→ミラくん→画面） */}
-        <MarketingSection className="bg-[#F7FBF7]">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div className="lg:order-2">
-              <SectionLabel>ニュース体験</SectionLabel>
-              <h2 className="mt-5 text-3xl font-black leading-tight text-[#1F2D20] sm:text-4xl">
-                ニュースから、
-                <span className="text-[#4BAF57]">社会とつながる</span>
-              </h2>
-              <div className="mt-5 flex flex-wrap gap-2.5">
-                {["株ってなに？", "円高ってなに？", "ビットコインってなに？"].map((q) => (
-                  <span
-                    key={q}
-                    className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-bold text-[#378C41] shadow-[0_10px_24px_rgba(75,175,87,0.10)]"
-                  >
-                    {q}
-                  </span>
-                ))}
-              </div>
-              <p className="mt-5 text-sm leading-8 text-[#516251] sm:text-base">
-                やさしく解説されたニュースが、親子で話すきっかけになります。
-                「これってどういうこと？」から、社会やお金への興味が広がります。
-              </p>
-              <Image
-                src="/images/character/mirakun-surprised.png"
-                alt="おどろくミラくん"
-                width={200}
-                height={200}
-                className="mt-5 h-auto w-28 object-contain sm:w-32"
+        {/* 07 ONE POINT */}
+        <section className="pb-14">
+          <div className="mx-auto w-full max-w-[1040px] px-5">
+            <div className="flex flex-col items-center gap-6 rounded-[20px] bg-[var(--green-50)] px-7 py-6 text-center sm:flex-row sm:text-left">
+              <Illust
+                src="/images/character/mirakun-happy.png"
+                className="h-28 w-24 shrink-0"
               />
-            </div>
-            <PhoneFrame
-              src="/images/lp/lp-phone-news.png"
-              alt="ミラマネのニュース画面"
-              className="lg:order-1"
-            />
-          </div>
-        </MarketingSection>
-
-        {/* 08 投資先アップデート ── ベージュ/クリーム背景・横長カード・アイコンは lucide/生成PNG */}
-        <MarketingSection>
-          <div className="rounded-[34px] bg-[linear-gradient(135deg,#FBEFD0_0%,#FFFAEF_100%)] px-6 py-9 shadow-[0_24px_60px_rgba(246,182,43,0.14)] sm:px-10">
-            <div className="grid gap-7 lg:grid-cols-[1fr_1.2fr] lg:items-center">
               <div>
-                <SectionLabel>投資先アップデート</SectionLabel>
-                <h2 className="mt-5 text-3xl font-black leading-tight text-[#1F2D20] sm:text-4xl">
-                  興味の数だけ、
-                  <span className="text-[#4BAF57]">学びが広がる</span>
-                </h2>
-                <p className="mt-4 text-sm leading-8 text-[#516251] sm:text-base">
-                  身近な会社やテーマを少しずつ追加予定。
-                  子どもの「好き」から、お金や社会を学ぶきっかけが広がります。
+                <span className="inline-block rounded-full bg-[var(--amber-100)] px-3 py-1 text-[12px] font-bold text-[var(--amber-500)]">
+                  ワンポイント
+                </span>
+                <h4 className="mt-2 text-[16px] font-bold leading-relaxed text-[var(--ink-900)]">
+                  おこづかいの使い方を見直すことで、将来に役立つお金の習慣が身につきます。
+                </h4>
+                <p className="mt-1 text-[13.5px] text-[var(--ink-700)]">
+                  ミラマネと一緒に、楽しく学んでいきましょう。
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3 lg:justify-end">
-                {INVEST_THEMES.map((c) => (
-                  <span
-                    key={c.label}
-                    className="inline-flex items-center gap-2.5 rounded-2xl border border-[rgba(246,182,43,0.35)] bg-white px-5 py-3 text-base font-bold text-[#1F2D20] shadow-[0_12px_28px_rgba(246,182,43,0.14)]"
-                  >
-                    <Illustration
-                      src={c.img}
-                      Icon={c.Icon}
-                      boxClassName="h-9 w-9 rounded-xl bg-[#FFF8E1]"
-                      iconClassName="h-5 w-5 text-[#C8951E]"
-                    />
-                    {c.label}
-                  </span>
-                ))}
-              </div>
             </div>
           </div>
-        </MarketingSection>
+        </section>
 
-        {/* 09 アップデート情報（app_announcements から取得 / 0件時は非表示） */}
+        {/* 08 UPDATES（DBの公開お知らせ。0件時は非表示） */}
         <LpAnnouncements />
 
-        {/* 10 CTA ── モバイルは ミラくん→見出し→本文→ボタン */}
-        <MarketingSection className="pb-14">
-          <div className="overflow-hidden rounded-[40px] bg-[linear-gradient(135deg,#4BAF57_0%,#2F8F3D_100%)] px-6 py-12 text-white shadow-[0_32px_80px_rgba(55,140,65,0.30)] sm:px-12 sm:py-16 lg:px-16">
-            <div className="grid gap-8 lg:grid-cols-[auto_1fr] lg:items-center lg:gap-14">
-              <div className="flex justify-center lg:justify-start">
-                <Image
-                  src="/images/character/mirakun-cheer.png"
-                  alt="応援するミラくん"
-                  width={400}
-                  height={400}
-                  className="h-auto w-56 object-contain sm:w-72"
-                />
-              </div>
-              <div>
-                <h2 className="text-3xl font-black leading-tight sm:text-[2.7rem]">
-                  おこづかいを渡すだけで、
-                  <br className="hidden sm:block" />
-                  終わらない。
-                </h2>
-                <p className="mt-4 max-w-2xl text-base leading-8 text-white/90">
-                  親子で「使う・貯める・考える・学ぶ」を
-                  <br className="hidden sm:block" />
-                  いっしょに体験してみませんか。
+        {/* 09 FINAL CTA */}
+        <section className="pb-16">
+          <div className="mx-auto w-full max-w-[1040px] px-5">
+            <div className="flex flex-col items-center gap-6 rounded-[28px] bg-[linear-gradient(135deg,var(--green-100),var(--green-50))] px-8 py-9 text-center sm:flex-row sm:text-left">
+              <Illust src="/images/character/mirakun-cheer.png" className="h-30 w-24 shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-[22px] font-bold text-[var(--ink-900)]">
+                  おこづかいを渡すだけで、終わらない。
+                </h3>
+                <p className="mt-1.5 text-[14px] leading-7 text-[var(--ink-700)]">
+                  親子で「使う・貯める・増やす・学ぶ」を、いっしょに体験してみませんか！
                 </p>
-                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                  <MarketingButton
-                    href="/register"
-                    variant="secondary"
-                    className="min-h-14 border-white/30 bg-white px-12 text-base text-[#2F8F3D] hover:bg-[#F4FAF5]"
-                  >
-                    無料ではじめる
-                  </MarketingButton>
-                  <MarketingButton
-                    href="/login"
-                    variant="ghost"
-                    className="min-h-14 border-white/60 px-12 text-base text-white hover:bg-white/10"
-                  >
-                    ログイン
-                  </MarketingButton>
-                </div>
+              </div>
+              <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+                <MarketingButton href="/register" variant="primary" className="min-h-12 px-7">
+                  ¥0&nbsp;&nbsp;無料ではじめる
+                </MarketingButton>
+                <MarketingButton href="/login" variant="secondary" className="min-h-12 px-7">
+                  ログイン
+                </MarketingButton>
               </div>
             </div>
           </div>
-        </MarketingSection>
+        </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#2F6F3A] px-5 py-10 text-white sm:px-8 lg:px-10">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+      {/* FOOTER */}
+      <footer className="border-t border-[var(--line)] bg-[var(--surface)] py-8">
+        <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-5 px-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Image
-              src="/assets/lp/logo-white.png"
+              src="/assets/lp/logo.png"
               alt="ミラマネ"
-              width={220}
-              height={64}
-              className="h-12 w-auto"
+              width={180}
+              height={54}
+              className="h-9 w-auto"
             />
-            <p className="mt-4 max-w-md text-sm leading-7 text-white/78">
+            <p className="mt-3 max-w-md text-[13px] leading-7 text-[var(--ink-500)]">
               お手伝いやおこづかいを通じて、親子で「使う・貯める・考える・学ぶ」を体験できるアプリ。
             </p>
           </div>
-          <div className="flex flex-col gap-3 text-sm text-white/80 sm:items-end">
-            <Link href="/login" className="transition hover:text-white">ログイン</Link>
-            <Link href="/register" className="transition hover:text-white">無料ではじめる</Link>
-            <p className="leading-7 text-white/75">
-              <LegalLinks linkClassName="underline underline-offset-4 transition hover:text-white" />
+          <div className="flex flex-col gap-2.5 text-[13px] text-[var(--ink-500)] sm:items-end">
+            <Link href="/login" className="transition hover:text-[var(--green-600)]">
+              ログイン
+            </Link>
+            <Link href="/register" className="transition hover:text-[var(--green-600)]">
+              無料ではじめる
+            </Link>
+            <p className="leading-7">
+              <LegalLinks linkClassName="underline underline-offset-4 transition hover:text-[var(--green-600)]" />
             </p>
-            <p className="text-white/60">© {new Date().getFullYear()} ミラマネ</p>
+            <p className="text-[var(--ink-300)]">© {new Date().getFullYear()} ミラマネ</p>
           </div>
         </div>
       </footer>
     </div>
+  );
+}
+
+// ─── FEATURES カード ────────────────────────────────────────────────────────
+function FeatureCard({
+  Icon,
+  title,
+  desc,
+  children,
+}: {
+  Icon: LucideIcon;
+  title: string;
+  desc: string;
+  children: ReactNode;
+}) {
+  return (
+    <article className="flex flex-col rounded-[16px] bg-[var(--surface)] p-5 shadow-[var(--sh-card)]">
+      <div className="mb-2 flex items-center gap-2 text-[17px] font-bold text-[var(--ink-900)]">
+        <Icon className="h-5 w-5 text-[var(--green-500)]" strokeWidth={1.8} aria-hidden />
+        {title}
+      </div>
+      <p className="mb-4 flex-1 text-[13.5px] leading-6 text-[var(--ink-500)]">{desc}</p>
+      {children}
+    </article>
   );
 }
