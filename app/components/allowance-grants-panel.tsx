@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useElementaryMode from "@/app/components/use-elementary-mode";
 import MemberAvatar from "@/app/components/ui/member-avatar";
@@ -785,6 +785,9 @@ export default function AllowanceGrantsPanel({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const childIdFromUrl = searchParams?.get("childId") ?? "";
+  // ホーム等から `?action=grant` で来たら、お小遣い付与モーダルを自動で開く。
+  const actionFromUrl = searchParams?.get("action") ?? "";
+  const grantAutoOpenedRef = useRef(false);
   const [selectedChildId, setSelectedChildId] = useState("");
   const [amountJpy, setAmountJpy] = useState("");
   const [grantDate, setGrantDate] = useState(todayDateValue);
@@ -1056,6 +1059,36 @@ export default function AllowanceGrantsPanel({
       setActivePage(1);
     }
   }, [childIdFromUrl, state.members]);
+
+  // `?action=grant` で来たら、お小遣い付与モーダルを一度だけ自動で開く。
+  // （保護者かつ子どもメンバーがいる場合のみ。開いた後は戻る/リロードでの
+  //  再オープンを防ぐため、URL から action を取り除く。）
+  useEffect(() => {
+    if (grantAutoOpenedRef.current) return;
+    if (actionFromUrl !== "grant" || state.loading) return;
+    const role = state.membership?.role;
+    const canGrant = role === "guardian_admin" || role === "guardian";
+    if (!canGrant) return;
+    if (!state.members.some((m) => m.role === "child")) return;
+
+    grantAutoOpenedRef.current = true;
+    setPendingChoice({ type: "grant_create" });
+
+    const params = new URLSearchParams(Array.from(searchParams?.entries() ?? []));
+    params.delete("action");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname ?? "/allowance"}?${qs}` : pathname ?? "/allowance", {
+      scroll: false,
+    });
+  }, [
+    actionFromUrl,
+    state.loading,
+    state.membership,
+    state.members,
+    searchParams,
+    router,
+    pathname,
+  ]);
 
   useEffect(() => {
     if (state.loading || state.isAuthenticated) {

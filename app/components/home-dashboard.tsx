@@ -615,10 +615,13 @@ function MemberCard({
   member,
   isSelf,
   navigable = true,
+  showGrantButton = false,
 }: {
   member: FamilyMember;
   isSelf: boolean;
   navigable?: boolean;
+  // 子どもアイコンの下に「お小遣いをあげる」ボタンを出すか（先頭の子どものみ true）
+  showGrantButton?: boolean;
 }) {
   const isChild = member.role === "child";
 
@@ -637,24 +640,36 @@ function MemberCard({
         {member.display_label}
       </p>
       {isSelf ? <StatusBadge tone="success">あなた</StatusBadge> : null}
-      {isChild && navigable ? (
-        <p className="text-[10px] font-semibold text-[var(--brand-primary)]">お小遣いを見る</p>
-      ) : null}
     </div>
   );
 
-  if (isChild && navigable) {
-    return (
+  const card =
+    isChild && navigable ? (
       <Link
         href={`/allowance?childId=${member.user_id}`}
         className="rounded-[18px] p-1 transition hover:bg-[var(--surface-accent)]"
       >
         {inner}
       </Link>
+    ) : (
+      <div className="p-1">{inner}</div>
+    );
+
+  if (showGrantButton) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        {card}
+        <Link
+          href={`/allowance?action=grant&childId=${member.user_id}`}
+          className="inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-full bg-[var(--button-primary-bg)] px-3.5 py-1.5 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(47,127,74,0.24)] transition hover:bg-[var(--button-primary-hover)]"
+        >
+          ＋ お小遣いをあげる
+        </Link>
+      </div>
     );
   }
 
-  return <div className="p-1">{inner}</div>;
+  return card;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -793,6 +808,10 @@ export default function HomeDashboard() {
 
   const isGuardian = state.role === "guardian_admin" || state.role === "guardian";
   const isChild = state.role === "child";
+  // 先頭の子ども（複数いても「お小遣いをあげる」ボタンはこの子の下にのみ表示。
+  // 渡す相手はモーダル内で選び直せる）
+  const firstChildUserId =
+    state.members.find((member) => member.role === "child")?.user_id ?? null;
   const { elementaryMode } = useElementaryMode();
   const isChildElementary = isChild && elementaryMode;
   const greetingName = state.displayName ?? state.email ?? "さん";
@@ -1123,12 +1142,13 @@ export default function HomeDashboard() {
                 <p className="mt-4 text-sm text-[var(--text-secondary)]">メンバーが見つかりません</p>
               ) : (
                 <div className="-mx-1 mt-5 overflow-x-auto pb-1">
-                  <div className="flex min-w-max gap-3 px-1">
+                  <div className="flex min-w-max items-start gap-3 px-1">
                     {state.members.map((member) => (
                       <MemberCard
                         key={member.user_id}
                         member={member}
                         isSelf={member.user_id === state.userId}
+                        showGrantButton={member.user_id === firstChildUserId}
                       />
                     ))}
                   </div>
