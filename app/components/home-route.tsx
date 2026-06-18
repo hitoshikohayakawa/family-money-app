@@ -15,6 +15,7 @@ import PushPermissionPromptModal, {
   shouldShowPushPrompt,
   markPushPromptShown,
 } from "@/app/components/push-permission-prompt-modal";
+import { refreshAppBadge } from "@/app/lib/refresh-app-badge";
 
 type AuthState = "loading" | "unauthenticated" | "authenticated";
 
@@ -22,6 +23,12 @@ export default function HomeRoute() {
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const [pushModalOpen, setPushModalOpen] = useState(false);
+
+  // ログイン済みホーム表示時に、PWAアイコンの未読・未対応バッジを更新
+  useEffect(() => {
+    if (authState !== "authenticated") return;
+    void refreshAppBadge();
+  }, [authState]);
 
   // ログイン済みホーム表示時に1回だけ自動表示。
   // 通知許可案内を優先し、出さない場合のみ従来のPWA案内にフォールバックする

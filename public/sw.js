@@ -13,7 +13,22 @@ self.addEventListener("push", (event) => {
     },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  const tasks = [self.registration.showNotification(title, options)];
+
+  // payload に badgeCount があり Badging API 対応なら、PWAアイコンのバッジも更新
+  if (
+    typeof data.badgeCount === "number" &&
+    self.navigator &&
+    typeof self.navigator.setAppBadge === "function"
+  ) {
+    tasks.push(
+      data.badgeCount > 0
+        ? self.navigator.setAppBadge(data.badgeCount).catch(() => {})
+        : (self.navigator.clearAppBadge?.() ?? Promise.resolve()).catch(() => {})
+    );
+  }
+
+  event.waitUntil(Promise.all(tasks));
 });
 
 self.addEventListener("notificationclick", (event) => {

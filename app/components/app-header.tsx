@@ -12,6 +12,7 @@ import PrimaryButton from "@/app/components/ui/primary-button";
 import SecondaryButton from "@/app/components/ui/secondary-button";
 import StatusBadge from "@/app/components/ui/status-badge";
 import { detectPwaPlatform } from "@/app/components/pwa-guide-modal";
+import { refreshAppBadge } from "@/app/lib/refresh-app-badge";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -388,16 +389,18 @@ export default function AppHeader({ onOpenPwaModal }: AppHeaderProps = {}) {
                   // Mark visible announcements as read when opening
                   if (opening && visibleAnnouncements.length > 0) {
                     const ids = visibleAnnouncements.map((a) => a.id);
-                    setReadAnnouncementIds((prev) => {
-                      const next = new Set([...prev, ...ids]);
-                      try {
-                        localStorage.setItem(
-                          "miramane_read_announcements",
-                          JSON.stringify([...next])
-                        );
-                      } catch { /* ignore */ }
-                      return next;
-                    });
+                    const next = new Set([...readAnnouncementIds, ...ids]);
+                    // localStorage を同期的に更新してから state 更新・バッジ再計算する
+                    // （refreshAppBadge は localStorage の既読を直接読むため順序が重要）
+                    try {
+                      localStorage.setItem(
+                        "miramane_read_announcements",
+                        JSON.stringify([...next])
+                      );
+                    } catch { /* ignore */ }
+                    setReadAnnouncementIds(next);
+                    // 既読化に合わせて PWA アイコンのバッジも再計算
+                    void refreshAppBadge();
                   }
                 }}
               >
