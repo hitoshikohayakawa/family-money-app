@@ -67,9 +67,61 @@ function ChartIcon({ active }: { active: boolean }) {
   );
 }
 
+const NEWS_SEEN_KEY = "news_last_seen_at";
+
 export default function FooterNav() {
   const pathname = usePathname();
   const [isChild, setIsChild] = useState(false);
+  const [showNewsBadge, setShowNewsBadge] = useState(false);
+
+  // ニュース未読バッジ: 最新公開日時を localStorage の既読時刻と比較する。
+  // /news を開いている間は既読として記録し、バッジを消す。
+  useEffect(() => {
+    let cancelled = false;
+    async function checkUnreadNews() {
+      const { data: { session } } = await getSafeSession(supabase);
+      if (!session?.user) return;
+      const { data } = await supabase
+        .from("news_articles")
+        .select("published_at")
+        .eq("status", "published")
+        .order("published_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const latest = data?.published_at as string | null | undefined;
+      if (!latest) {
+        if (!cancelled) setShowNewsBadge(false);
+        return;
+      }
+
+      const onNews = pathname === "/news" || pathname.startsWith("/news/");
+      if (onNews) {
+        try {
+          localStorage.setItem(NEWS_SEEN_KEY, latest);
+        } catch {
+          // localStorage が使えない環境は既読管理をスキップ
+        }
+        if (!cancelled) setShowNewsBadge(false);
+        return;
+      }
+
+      let lastSeen: string | null = null;
+      try {
+        lastSeen = localStorage.getItem(NEWS_SEEN_KEY);
+      } catch {
+        lastSeen = null;
+      }
+      const hasUnread =
+        new Date(latest).getTime() >
+        (lastSeen ? new Date(lastSeen).getTime() : 0);
+      if (!cancelled) setShowNewsBadge(hasUnread);
+    }
+    void checkUnreadNews();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   useEffect(() => {
     async function checkRole() {
@@ -116,12 +168,20 @@ export default function FooterNav() {
               href={href}
               className={`flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] font-semibold transition sm:px-4 sm:text-xs ${color}`}
             >
-              {href === "/" && <HomeIcon active={active} />}
-              {href === "/allowance" && <WalletIcon active={active} />}
-              {href === "/news" && <NewsIcon active={active} />}
-              {href === "/charts" && <ChartIcon active={active} />}
-              {href === "/family" && <FamilyIcon active={active} />}
-              {href === "/settings" && <SettingsIcon active={active} />}
+              <span className="relative">
+                {href === "/" && <HomeIcon active={active} />}
+                {href === "/allowance" && <WalletIcon active={active} />}
+                {href === "/news" && <NewsIcon active={active} />}
+                {href === "/charts" && <ChartIcon active={active} />}
+                {href === "/family" && <FamilyIcon active={active} />}
+                {href === "/settings" && <SettingsIcon active={active} />}
+                {href === "/news" && showNewsBadge && (
+                  <span
+                    className="absolute -right-1.5 -top-1 h-2.5 w-2.5 rounded-full border border-white bg-[var(--danger)]"
+                    aria-label="新着ニュースあり"
+                  />
+                )}
+              </span>
               <span>{label}</span>
             </Link>
           );

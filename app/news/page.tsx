@@ -60,7 +60,7 @@ export default async function NewsPage() {
             />
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((article) => (
+              {rows.map((article, index) => (
                 <NewsCard
                   key={article.id}
                   id={article.id}
@@ -68,6 +68,7 @@ export default async function NewsPage() {
                   summary={article.summary}
                   heroImageUrl={articleImageUrl(article.hero_image_path)}
                   publishedAt={article.published_at}
+                  isNew={index === 0}
                 />
               ))}
             </div>

@@ -333,6 +333,66 @@ function isCashoutReadyInvestment(grant: AllowanceGrant) {
   return grant.decision_status === "invested" && !grant.cashout_status;
 }
 
+type ChildInvestmentGroup = {
+  key: string;
+  assetName: string;
+  categoryCode: InvestmentCategoryCode | null;
+  grants: AllowanceGrant[];
+  totalInvested: number;
+  totalCurrentValue: number;
+  totalGain: number;
+  totalGainRate: number;
+};
+
+function groupChildInvestmentsByAsset(
+  grants: AllowanceGrant[],
+  investmentAssets: InvestmentAssetOption[]
+): ChildInvestmentGroup[] {
+  const groups = new Map<string, ChildInvestmentGroup>();
+
+  grants.forEach((grant) => {
+    const key =
+      grant.decision_asset_id ??
+      grant.decision_asset_code ??
+      grant.decision_asset_name ??
+      "unknown";
+    const currentValue = grant.current_value_jpy ?? grant.amount_jpy;
+    const gain = grant.unrealized_gain_jpy ?? 0;
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.grants.push(grant);
+      existing.totalInvested += grant.amount_jpy;
+      existing.totalCurrentValue += currentValue;
+      existing.totalGain += gain;
+      return;
+    }
+
+    groups.set(key, {
+      key,
+      assetName: grant.decision_asset_name ?? "投資先",
+      categoryCode: getInvestmentCategoryCodeForGrant(grant, investmentAssets),
+      grants: [grant],
+      totalInvested: grant.amount_jpy,
+      totalCurrentValue: currentValue,
+      totalGain: gain,
+      totalGainRate: 0,
+    });
+  });
+
+  const result = Array.from(groups.values());
+
+  result.forEach((group) => {
+    group.totalGainRate =
+      group.totalInvested > 0 ? (group.totalGain / group.totalInvested) * 100 : 0;
+    group.grants.sort(
+      (a, b) => new Date(b.granted_at).getTime() - new Date(a.granted_at).getTime()
+    );
+  });
+
+  return result;
+}
+
 function clampPage(page: number, pageCount: number) {
   return Math.min(Math.max(page, 1), Math.max(pageCount, 1));
 }
@@ -1364,6 +1424,17 @@ export default function AllowanceGrantsPanel({
     );
   };
 
+  const toggleCashoutGroup = (grantIds: string[], shouldSelect: boolean) => {
+    setSelectedCashoutGrantIds((currentValue) => {
+      if (shouldSelect) {
+        const next = new Set(currentValue);
+        grantIds.forEach((id) => next.add(id));
+        return Array.from(next);
+      }
+      return currentValue.filter((id) => !grantIds.includes(id));
+    });
+  };
+
   const toggleExpandedInvestmentGrant = (grantId: string) => {
     setExpandedInvestmentGrantIds((currentValue) =>
       currentValue.includes(grantId)
@@ -1541,6 +1612,10 @@ export default function AllowanceGrantsPanel({
       : activeGrants;
   const childPendingGrants = activeGrants.filter((grant) => grant.decision_status === "pending");
   const childInvestedGrants = activeGrants.filter((grant) => grant.decision_status === "invested");
+  const childInvestmentGroups = groupChildInvestmentsByAsset(
+    childInvestedGrants,
+    state.investmentAssets
+  );
   const cashoutRequests = groupCashoutRequests(state.grants);
   const requestedCashoutGroups = cashoutRequests.filter((group) => group.status === "requested");
   const paidCashoutGroups = cashoutRequests.filter((group) => group.status === "paid");
@@ -2390,208 +2465,173 @@ export default function AllowanceGrantsPanel({
                     description={<AutoHiragana enabled={isElementaryChildMode}>いま投資をしているもの一覧です</AutoHiragana>}
                   />
                   <div className="grid gap-3">
-                    {childInvestedGrants.map((grant) => (
-                      <div
-                        key={grant.id}
-                        className="overflow-hidden rounded-[24px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] shadow-[0_10px_22px_rgba(51,101,63,0.08)]"
-                      >
-                        {(() => {
-                          const isExpanded = expandedInvestmentGrantIds.includes(grant.id);
-                          const currentValue = grant.current_value_jpy ?? grant.amount_jpy;
-                          const categoryCode = getInvestmentCategoryCodeForGrant(
-                            grant,
-                            state.investmentAssets
-                          );
-                          const gainTone =
-                            grant.unrealized_gain_jpy !== null && grant.unrealized_gain_jpy < 0
-                              ? "text-[var(--danger)]"
-                              : "text-[var(--success)]";
+                    {childInvestmentGroups.map((group) => {
+                      const isExpanded = expandedInvestmentGrantIds.includes(group.key);
+                      const gainTone =
+                        group.totalGain < 0
+                          ? "text-[var(--danger)]"
+                          : "text-[var(--success)]";
+                      const groupCashoutGrantIds = group.grants
+                        .filter(isCashoutReadyInvestment)
+                        .map((grant) => grant.id);
+                      const groupAllSelected =
+                        groupCashoutGrantIds.length > 0 &&
+                        groupCashoutGrantIds.every((id) =>
+                          selectedCashoutGrantIds.includes(id)
+                        );
+                      const groupSomeSelected = groupCashoutGrantIds.some((id) =>
+                        selectedCashoutGrantIds.includes(id)
+                      );
 
-                          return (
-                            <>
-                              <div className="px-4 py-4">
-                                <div className="flex items-start gap-3">
-                                  {isCashoutReadyInvestment(grant) ? (
-                                    <label className="mt-1 flex shrink-0 cursor-pointer items-center justify-center">
-                                      <input
-                                        type="checkbox"
-                                        className="h-6 w-6 rounded-md border border-[var(--border-soft)] accent-[var(--brand-blue)]"
-                                        checked={selectedCashoutGrantIds.includes(grant.id)}
-                                        onChange={() => toggleCashoutGrant(grant.id)}
-                                        aria-label="この投資を引き出す候補に入れる"
-                                      />
-                                    </label>
-                                  ) : (
-                                    <div className="h-6 w-6 shrink-0" />
-                                  )}
-
-                                  <div className="min-w-0 flex-1">
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-3">
-                                        <InvestmentCategoryIcon categoryCode={categoryCode} />
-                                        <div className="min-w-0">
-                                          <p className="truncate text-[1.05rem] font-extrabold text-[var(--text-primary)]">
-                                            {grant.decision_asset_name ?? "投資先"}
-                                          </p>
-                                          <p className="mt-0.5 text-[0.75rem] text-[var(--text-muted)]">
-                                            くれたひと：{grant.granted_by_display_label}
-                                          </p>
-                                        </div>
-                                      </div>
-
-                                      <div className="mt-3 grid grid-cols-[auto_1fr] items-end gap-x-4 gap-y-2 rounded-[18px] bg-[rgba(244,251,245,0.72)] px-3 py-3">
-                                        <p className="text-[0.78rem] font-semibold text-[var(--text-secondary)]">
-                                          <AutoHiragana enabled={isElementaryChildMode}>現在の価格</AutoHiragana>
-                                        </p>
-                                        <p className="text-right text-[2rem] font-black leading-none text-[var(--text-primary)]">
-                                          {formatCurrency(currentValue)}
-                                        </p>
-                                        <p className="text-[0.78rem] font-semibold text-[var(--text-secondary)]">
-                                          <AutoHiragana enabled={isElementaryChildMode}>増減金額</AutoHiragana>
-                                        </p>
-                                        <p className={`text-right text-base font-black ${gainTone}`}>
-                                          {grant.unrealized_gain_jpy !== null
-                                            ? formatSignedCurrency(grant.unrealized_gain_jpy)
-                                            : "未取得"}
-                                          {grant.unrealized_gain_rate !== null
-                                            ? ` (${formatSignedPercent(grant.unrealized_gain_rate)})`
-                                            : ""}
-                                        </p>
-                                      </div>
-
-                                      <button
-                                        type="button"
-                                        className="mt-3 flex w-full items-center justify-between rounded-[16px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-left text-sm font-semibold text-[var(--text-primary)]"
-                                        onClick={() => toggleExpandedInvestmentGrant(grant.id)}
-                                        aria-expanded={isExpanded}
-                                      >
-                                        <span>
-                                          {isExpanded
-                                            ? <AutoHiragana enabled={isElementaryChildMode}>詳細を閉じる</AutoHiragana>
-                                            : <AutoHiragana enabled={isElementaryChildMode}>詳細を見る</AutoHiragana>}
-                                        </span>
-                                        <span className="text-base">{isExpanded ? "▲" : "▼"}</span>
-                                      </button>
-                                    </div>
-
-                                    {isExpanded ? (
-                                      <div className="mt-3 space-y-3 rounded-[18px] bg-[linear-gradient(180deg,rgba(76,163,104,0.14),rgba(76,163,104,0.08))] px-3 py-3 text-sm text-[var(--text-secondary)]">
-                                        {grant.note ? (
-                                          <div className="rounded-[14px] bg-white/70 px-3 py-3">
-                                            <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                              <AutoHiragana enabled={isElementaryChildMode}>投資説明</AutoHiragana>
-                                            </p>
-                                            <p className="mt-1 leading-6 text-[var(--text-primary)]">
-                                              {grant.note}
-                                            </p>
-                                          </div>
-                                        ) : null}
-
-                                        <div className="grid gap-3 lg:grid-cols-2">
-                                          <div className="rounded-[16px] bg-white/75 px-3 py-3">
-                                            <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                              <AutoHiragana enabled={isElementaryChildMode}>価格推移の詳細</AutoHiragana>
-                                            </p>
-                                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                              <div>
-                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  <AutoHiragana enabled={isElementaryChildMode}>もらった年月日</AutoHiragana>
-                                                </p>
-                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
-                                                  {formatGrantDateLabel(grant.granted_at)}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  <AutoHiragana enabled={isElementaryChildMode}>取得した日の価格</AutoHiragana>
-                                                </p>
-                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
-                                                  {grant.investment_unit_price_jpy !== null
-                                                    ? formatCurrency(grant.investment_unit_price_jpy)
-                                                    : "未取得"}
-                                                </p>
-                                                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                                  {grant.investment_price_date
-                                                    ? formatGrantDateLabel(grant.investment_price_date)
-                                                    : "価格日なし"}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  <AutoHiragana enabled={isElementaryChildMode}>現在の価格</AutoHiragana>
-                                                </p>
-                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
-                                                  {grant.latest_unit_price_jpy !== null
-                                                    ? formatCurrency(grant.latest_unit_price_jpy)
-                                                    : "未取得"}
-                                                </p>
-                                                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                                  {grant.latest_price_date
-                                                    ? formatGrantDateLabel(grant.latest_price_date)
-                                                    : "価格日なし"}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          <div className="rounded-[16px] bg-white/75 px-3 py-3">
-                                            <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                              <AutoHiragana enabled={isElementaryChildMode}>投資額の詳細</AutoHiragana>
-                                            </p>
-                                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                              <div>
-                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  <AutoHiragana enabled={isElementaryChildMode}>入れた金額</AutoHiragana>
-                                                </p>
-                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
-                                                  {formatCurrency(grant.amount_jpy)}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                  <AutoHiragana enabled={isElementaryChildMode}>現在の評価額</AutoHiragana>
-                                                </p>
-                                                <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
-                                                  {formatCurrency(currentValue)}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="rounded-[16px] border border-[rgba(84,130,95,0.12)] bg-white/70 px-3 py-3">
-                                          <p className="text-xs font-semibold tracking-[0.08em] text-[var(--text-muted)]">
-                                            <AutoHiragana enabled={isElementaryChildMode}>その他の補足情報</AutoHiragana>
-                                          </p>
-                                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                            <div>
-                                              <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                <AutoHiragana enabled={isElementaryChildMode}>作成者</AutoHiragana>
-                                              </p>
-                                              <p className="mt-1 font-semibold text-[var(--text-primary)]">
-                                                {grant.granted_by_display_label}
-                                              </p>
-                                            </div>
-                                            <div>
-                                              <p className="text-xs font-semibold text-[var(--text-muted)]">
-                                                <AutoHiragana enabled={isElementaryChildMode}>評価額の計算</AutoHiragana>
-                                              </p>
-                                              <p className="mt-1 font-semibold text-[var(--text-primary)]">
-                                                <AutoHiragana enabled={isElementaryChildMode}>最新価格を使って計算しています</AutoHiragana>
-                                              </p>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                </div>
+                      return (
+                        <div
+                          key={group.key}
+                          className="overflow-hidden rounded-[24px] border border-[var(--border-soft)] bg-[var(--surface-card-strong)] shadow-[0_10px_22px_rgba(51,101,63,0.08)]"
+                        >
+                          <div className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              {groupCashoutGrantIds.length > 0 ? (
+                                <label className="flex shrink-0 cursor-pointer items-center justify-center">
+                                  <input
+                                    type="checkbox"
+                                    className="h-6 w-6 rounded-md border border-[var(--border-soft)] accent-[var(--brand-blue)]"
+                                    checked={groupAllSelected}
+                                    ref={(node) => {
+                                      if (node) {
+                                        node.indeterminate =
+                                          groupSomeSelected && !groupAllSelected;
+                                      }
+                                    }}
+                                    onChange={() =>
+                                      toggleCashoutGroup(
+                                        groupCashoutGrantIds,
+                                        !groupAllSelected
+                                      )
+                                    }
+                                    aria-label={`${group.assetName}の投資をまとめて引き出す候補に入れる`}
+                                  />
+                                </label>
+                              ) : null}
+                              <InvestmentCategoryIcon categoryCode={group.categoryCode} />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[1.05rem] font-extrabold text-[var(--text-primary)]">
+                                  {group.assetName}
+                                </p>
+                                <p className="mt-0.5 text-[0.75rem] text-[var(--text-muted)]">
+                                  {group.grants.length}
+                                  <AutoHiragana enabled={isElementaryChildMode}>件のお小遣い</AutoHiragana>
+                                </p>
                               </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    ))}
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-[auto_1fr] items-end gap-x-4 gap-y-2 rounded-[18px] bg-[rgba(244,251,245,0.72)] px-3 py-3">
+                              <p className="text-[0.78rem] font-semibold text-[var(--text-secondary)]">
+                                <AutoHiragana enabled={isElementaryChildMode}>合計金額</AutoHiragana>
+                              </p>
+                              <p className="text-right text-[2rem] font-black leading-none text-[var(--text-primary)]">
+                                {formatCurrency(group.totalCurrentValue)}
+                              </p>
+                              <p className="text-[0.78rem] font-semibold text-[var(--text-secondary)]">
+                                <AutoHiragana enabled={isElementaryChildMode}>増減金額</AutoHiragana>
+                              </p>
+                              <p className={`text-right text-base font-black ${gainTone}`}>
+                                {formatSignedCurrency(group.totalGain)}
+                                {` (${formatSignedPercent(group.totalGainRate)})`}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              className="mt-3 flex w-full items-center justify-between rounded-[16px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.72)] px-3 py-3 text-left text-sm font-semibold text-[var(--text-primary)]"
+                              onClick={() => toggleExpandedInvestmentGrant(group.key)}
+                              aria-expanded={isExpanded}
+                            >
+                              <span>
+                                {isExpanded
+                                  ? <AutoHiragana enabled={isElementaryChildMode}>詳細を閉じる</AutoHiragana>
+                                  : <AutoHiragana enabled={isElementaryChildMode}>詳細を見る</AutoHiragana>}
+                              </span>
+                              <span className="text-base">{isExpanded ? "▲" : "▼"}</span>
+                            </button>
+                          </div>
+
+                          {isExpanded ? (
+                            <div className="border-t border-[rgba(84,130,95,0.12)] bg-[rgba(243,251,244,0.54)] px-3 py-3">
+                              <div className="overflow-x-auto">
+                                <table className="w-full min-w-[420px] text-left text-sm">
+                                  <thead>
+                                    <tr className="text-[0.72rem] font-semibold text-[var(--text-muted)]">
+                                      <th className="pb-2 pr-2 font-semibold" aria-label="引き出す候補" />
+                                      <th className="pb-2 pr-3 font-semibold">
+                                        <AutoHiragana enabled={isElementaryChildMode}>もらった日</AutoHiragana>
+                                      </th>
+                                      <th className="pb-2 pr-3 font-semibold">
+                                        <AutoHiragana enabled={isElementaryChildMode}>金額</AutoHiragana>
+                                      </th>
+                                      <th className="pb-2 pr-3 font-semibold">
+                                        <AutoHiragana enabled={isElementaryChildMode}>現在価格</AutoHiragana>
+                                      </th>
+                                      <th className="pb-2 font-semibold">
+                                        <AutoHiragana enabled={isElementaryChildMode}>くれた人</AutoHiragana>
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {group.grants.map((grant) => {
+                                      const currentValue =
+                                        grant.current_value_jpy ?? grant.amount_jpy;
+                                      const rowGainTone =
+                                        grant.unrealized_gain_jpy !== null &&
+                                        grant.unrealized_gain_jpy < 0
+                                          ? "text-[var(--danger)]"
+                                          : "text-[var(--success)]";
+
+                                      return (
+                                        <tr
+                                          key={grant.id}
+                                          className="border-t border-[rgba(84,130,95,0.12)] align-middle"
+                                        >
+                                          <td className="py-2 pr-2">
+                                            {isCashoutReadyInvestment(grant) ? (
+                                              <input
+                                                type="checkbox"
+                                                className="h-5 w-5 rounded-md border border-[var(--border-soft)] accent-[var(--brand-blue)]"
+                                                checked={selectedCashoutGrantIds.includes(grant.id)}
+                                                onChange={() => toggleCashoutGrant(grant.id)}
+                                                aria-label="この投資を引き出す候補に入れる"
+                                              />
+                                            ) : null}
+                                          </td>
+                                          <td className="whitespace-nowrap py-2 pr-3 text-[var(--text-secondary)]">
+                                            {formatGrantDateLabel(grant.granted_at)}
+                                          </td>
+                                          <td className="whitespace-nowrap py-2 pr-3 font-bold text-[var(--text-primary)]">
+                                            {formatCurrency(grant.amount_jpy)}
+                                          </td>
+                                          <td className="whitespace-nowrap py-2 pr-3">
+                                            <span className="font-bold text-[var(--text-primary)]">
+                                              {formatCurrency(currentValue)}
+                                            </span>
+                                            {grant.unrealized_gain_rate !== null ? (
+                                              <span className={`ml-1 font-semibold ${rowGainTone}`}>
+                                                ({formatSignedPercent(grant.unrealized_gain_rate)})
+                                              </span>
+                                            ) : null}
+                                          </td>
+                                          <td className="py-2 text-[var(--text-secondary)]">
+                                            {grant.granted_by_display_label}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : null}

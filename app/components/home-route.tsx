@@ -11,18 +11,28 @@ import PwaGuideModal, {
   shouldShowPwaModal,
   markPwaModalShown,
 } from "@/app/components/pwa-guide-modal";
+import PushPermissionPromptModal, {
+  shouldShowPushPrompt,
+  markPushPromptShown,
+} from "@/app/components/push-permission-prompt-modal";
 
 type AuthState = "loading" | "unauthenticated" | "authenticated";
 
 export default function HomeRoute() {
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
+  const [pushModalOpen, setPushModalOpen] = useState(false);
 
-  // PWA案内モーダル: ログイン済みホーム表示時に1回だけ自動表示
+  // ログイン済みホーム表示時に1回だけ自動表示。
+  // 通知許可案内を優先し、出さない場合のみ従来のPWA案内にフォールバックする
+  // （二重表示を防ぐ）。
   useEffect(() => {
     if (authState !== "authenticated") return;
     const timer = setTimeout(() => {
-      if (shouldShowPwaModal()) {
+      if (shouldShowPushPrompt()) {
+        markPushPromptShown();
+        setPushModalOpen(true);
+      } else if (shouldShowPwaModal()) {
         markPwaModalShown();
         setPwaModalOpen(true);
       }
@@ -74,6 +84,10 @@ export default function HomeRoute() {
       <PwaGuideModal
         open={pwaModalOpen}
         onClose={() => setPwaModalOpen(false)}
+      />
+      <PushPermissionPromptModal
+        open={pushModalOpen}
+        onClose={() => setPushModalOpen(false)}
       />
     </>
   );

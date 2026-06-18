@@ -10,6 +10,7 @@ type Props = {
   summary: string | null;
   heroImageUrl: string | null;
   publishedAt: string | null;
+  isNew?: boolean;
 };
 
 export default function NewsCard({
@@ -18,6 +19,7 @@ export default function NewsCard({
   summary,
   heroImageUrl,
   publishedAt,
+  isNew = false,
 }: Props) {
   const { elementaryMode } = useElementaryMode();
 
@@ -27,7 +29,14 @@ export default function NewsCard({
 
   return (
     <Link href={`/news/${id}`} className="group block">
-      <article className="flex h-full flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_4px_20px_rgba(76,163,104,0.10)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0">
+      <article className="relative flex h-full flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_4px_20px_rgba(76,163,104,0.10)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0">
+        {/* NEW badge (latest article only) */}
+        {isNew && (
+          <span className="absolute left-3 top-3 z-10 inline-flex items-center rounded-full bg-[var(--danger)] px-2.5 py-1 text-xs font-black tracking-wide text-white shadow-[0_2px_8px_rgba(191,110,82,0.4)]">
+            NEW
+          </span>
+        )}
+
         {/* Hero image or placeholder */}
         {heroImageUrl ? (
           <div className="aspect-[16/9] overflow-hidden">

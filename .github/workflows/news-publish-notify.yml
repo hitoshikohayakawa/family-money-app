@@ -1,0 +1,34 @@
+name: News Publish Notify
+
+on:
+  schedule:
+    # 10分ごとに未通知の公開ニュースをチェックしてプッシュ送信
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: news-publish-notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger news notification endpoint
+        env:
+          # 既定は正規ドメイン(www)。apex(famimane.me)は www へ307転送されるため直接wwwを叩く。
+          APP_URL: ${{ secrets.APP_URL || 'https://www.famimane.me' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET secret is not set." >&2
+            exit 1
+          fi
+          # -L: 万一リダイレクトされても追従（カスタムヘッダは再送される）
+          curl -fsSL --retry 2 -X POST \
+            -H "x-cron-secret: $CRON_SECRET" \
+            "$APP_URL/api/news/send-notifications"
