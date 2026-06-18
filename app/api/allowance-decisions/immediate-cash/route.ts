@@ -33,7 +33,7 @@ function formatCurrency(amount: number) {
 const siteUrl =
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://famimane.me";
+  "https://www.miramane.me";
 
 async function fetchEmailByUserId(userId: string): Promise<string | null> {
   const adminClient = createServiceRoleServerClient();

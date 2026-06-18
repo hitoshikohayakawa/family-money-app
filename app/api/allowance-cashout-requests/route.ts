@@ -41,7 +41,7 @@ function formatCurrency(amount: number) {
 const siteUrl =
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://famimane.me";
+  "https://www.miramane.me";
 
 export async function POST(request: Request) {
   if (!hasServerSupabaseEnv()) {

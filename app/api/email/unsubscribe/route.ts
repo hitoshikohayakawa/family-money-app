@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://famimane.me";
+    "https://www.miramane.me";
 
   if (!token) {
     return NextResponse.redirect(`${appUrl}/unsubscribe?error=invalid`);

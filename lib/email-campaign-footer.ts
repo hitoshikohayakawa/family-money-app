@@ -1,7 +1,7 @@
 // Shared footer for marketing / update emails ONLY.
 // Do NOT use this in system notification emails (invites, allowance, cashout, etc.).
 
-const APP_URL = "https://famimane.me";
+const APP_URL = "https://www.miramane.me";
 const CONTACT_URL = "https://forms.gle/yWjnWtfwQqf1RX9GA";
 
 export function buildCampaignEmailText(

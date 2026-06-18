@@ -11,11 +11,11 @@ const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.TEST_SUPABASE_SERVICE_ROLE_KEY;
 const resendApiKey = process.env.RESEND_API_KEY;
 
-const FROM_ADDRESS = "ミラマネ運営 <news@famimane.me>";
+const FROM_ADDRESS = "ミラマネ運営 <news@miramane.me>";
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://famimane.me";
+  "https://www.miramane.me";
 
 // Resend free tier: 100/day, 3000/month — we cap at 90/day for safety margin
 const DAILY_SEND_LIMIT = 90;

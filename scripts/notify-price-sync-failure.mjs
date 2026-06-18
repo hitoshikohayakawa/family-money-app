@@ -1,6 +1,6 @@
 const resendApiKey = process.env.RESEND_API_KEY;
 const notificationEmailFrom =
-  process.env.NOTIFICATION_EMAIL_FROM ?? "ミラマネ <noreply@famimane.app>";
+  process.env.NOTIFICATION_EMAIL_FROM ?? "ミラマネ <noreply@miramane.me>";
 const notificationEmailTo =
   process.env.PRICE_SYNC_ALERT_EMAIL?.trim() || "h.kohayakawa@petsallright.net";
 

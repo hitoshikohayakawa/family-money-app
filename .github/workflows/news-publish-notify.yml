@@ -20,8 +20,8 @@ jobs:
     steps:
       - name: Trigger news notification endpoint
         env:
-          # 既定は正規ドメイン(www)。apex(famimane.me)は www へ307転送されるため直接wwwを叩く。
-          APP_URL: ${{ secrets.APP_URL || 'https://www.famimane.me' }}
+          # 既定は正規ドメイン(www)。apex(miramane.me)は www へ転送されるため直接wwwを叩く。
+          APP_URL: ${{ secrets.APP_URL || 'https://www.miramane.me' }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
