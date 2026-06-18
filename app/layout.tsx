@@ -37,9 +37,9 @@ export const metadata: Metadata = {
   type: "website",
     images: [
       {
-        url: "/famimane_ogp.png?v=3",
-        width: 1733,
-        height: 907,
+        url: "/miramane_ogp.png?v=1",
+        width: 1731,
+        height: 909,
         alt: "ミラマネのOGP画像",
         type: "image/png",
       },
@@ -51,9 +51,9 @@ export const metadata: Metadata = {
     description: "家族でたのしくお金を学ぶアプリ",
     images: [
       {
-        url: "/famimane_ogp.png?v=3",
-        width: 1733,
-        height: 907,
+        url: "/miramane_ogp.png?v=1",
+        width: 1731,
+        height: 909,
         alt: "ミラマネのOGP画像",
       },
     ],

@@ -63,15 +63,13 @@ export async function POST(request: Request) {
   );
 
   if (userIds.length > 0) {
-    const body =
-      articles.length === 1
-        ? `新しいニュース「${articles[0].title}」が公開されました`
-        : `新しいニュースが${articles.length}件公開されました`;
+    // 記事タイトルは長くなりがちなので固定文で通知する。
+    // 遷移先は1件ならその記事、複数まとめてなら一覧。
     const url = articles.length === 1 ? `/news/${articles[0].id}` : "/news";
 
     await sendPushToUsers(userIds, {
-      title: "ミラマネ",
-      body,
+      title: "【新着ニュース】",
+      body: "新しいニュースがはっしんされたよ！",
       url,
       type: "news_published",
     });
