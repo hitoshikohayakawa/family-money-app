@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, M_PLUS_Rounded_1c } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const siteUrl =
@@ -74,6 +75,14 @@ export default function RootLayout({
           iOS standalone PWA で position:fixed のフッターがスクロール時に
           下端へ追従しなくなる問題を防ぐため、ウィンドウをスクローラにする。 */}
       <body className="flex flex-col">{children}</body>
+      {/* Google AdSense ローダー。next/script が <head> 相当の最適化読み込みを行う。 */}
+      <Script
+        id="google-adsense"
+        async
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9176462458276131"
+        crossOrigin="anonymous"
+        strategy="afterInteractive"
+      />
     </html>
   );
 }
