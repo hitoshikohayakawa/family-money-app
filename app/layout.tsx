@@ -83,6 +83,19 @@ export default function RootLayout({
         crossOrigin="anonymous"
         strategy="afterInteractive"
       />
+      {/* Google Analytics (gtag.js)。ローダーと初期化の2スクリプト構成。 */}
+      <Script
+        id="google-analytics-loader"
+        async
+        src="https://www.googletagmanager.com/gtag/js?id=G-55JXTNPFB2"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics-init" strategy="afterInteractive">
+        {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-55JXTNPFB2');`}
+      </Script>
     </html>
   );
 }
