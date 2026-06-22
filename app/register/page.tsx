@@ -115,6 +115,24 @@ function RegisterPageContent() {
       return;
     }
 
+    // 既登録メールの「偽の成功」を検知する。
+    // ユーザー列挙対策が有効な場合、確認済みメールで signUp してもエラーは返らず、
+    // identities が空のユーザーが返り、確認メールも送信されない。
+    // この状態を成功扱いすると誤った「確認メールを送りました」を表示してしまうため、
+    // ここで弾いてログイン/パスワード再設定へ誘導する。
+    const isExistingUser =
+      !data.session &&
+      data.user != null &&
+      (data.user.identities?.length ?? 0) === 0;
+
+    if (isExistingUser) {
+      setErrorMessage(
+        "このメールアドレスはすでに登録されています。ログイン、またはパスワードをお忘れの場合は再設定をご利用ください。"
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
     // 登録フォームの送信成功時のみ GTM の dataLayer へイベントを送信する。
     // 計測点はメール認証完了ではなく「サインアップ送信成功」時点である。
     // エラー時は上の return で抜けるため発火せず、ここは成功時に一度だけ通る。
