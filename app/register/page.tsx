@@ -115,6 +115,19 @@ function RegisterPageContent() {
       return;
     }
 
+    // 登録成功時のみ GTM の dataLayer へコンバージョンイベントを送信する。
+    // エラー時は上の return で抜けるため発火せず、ここは成功時に一度だけ通る。
+    // 現状の登録経路は email/password のみ（OAuth 未使用）のため signup_method は "email"。
+    const dataLayerWindow = window as typeof window & {
+      dataLayer?: Record<string, unknown>[];
+    };
+    dataLayerWindow.dataLayer = dataLayerWindow.dataLayer || [];
+    dataLayerWindow.dataLayer.push({
+      event: "signup_complete",
+      service: "miramane",
+      signup_method: "email",
+    });
+
     if (data.session) {
       router.replace(nextPath);
     } else {
