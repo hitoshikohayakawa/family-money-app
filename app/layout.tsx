@@ -71,10 +71,29 @@ export default function RootLayout({
       lang="ja"
       className={`${roundedSans.variable} ${geistMono.variable} antialiased`}
     >
+      {/* Google Tag Manager。<head> 相当の早い段階で dataLayer を初期化する。 */}
+      <Script id="google-tag-manager" strategy="afterInteractive">
+        {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KB89XF7R');`}
+      </Script>
       {/* html を固定高にしない（min-height は globals の body 側で 100dvh 指定）。
           iOS standalone PWA で position:fixed のフッターがスクロール時に
           下端へ追従しなくなる問題を防ぐため、ウィンドウをスクローラにする。 */}
-      <body className="flex flex-col">{children}</body>
+      <body className="flex flex-col">
+        {/* Google Tag Manager (noscript)。<body> 直後に配置する。 */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-KB89XF7R"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+        {children}
+      </body>
       {/* Google AdSense ローダー。next/script が <head> 相当の最適化読み込みを行う。 */}
       <Script
         id="google-adsense"
