@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, Suspense, useMemo, useState, useEffect } from "react";
+import { FormEvent, Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LegalLinks, LegalLoginNotice } from "@/app/components/ui/legal-links";
 import { getSafeSession } from "@/lib/client-auth";
@@ -47,6 +47,10 @@ function LoginPageContent() {
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 手動ログイン処理中は、onAuthStateChange による自動遷移を抑止する。
+  // signInWithPassword 成功直後に SIGNED_IN が発火し、disabled 判定より先に
+  // ホームへ遷移してしまう競合を防ぐため（disabled ユーザーがホームに弾かれる事象）。
+  const manualAuthInProgress = useRef(false);
 
   useEffect(() => {
     let isActive = true;
@@ -69,6 +73,8 @@ function LoginPageContent() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      // 手動ログイン中は handleSubmit 側が遷移を制御するため、ここでは遷移しない。
+      if (manualAuthInProgress.current) return;
       const user = session?.user;
       if (user) router.replace(getDestination(Boolean(user.user_metadata?.requires_password_setup)));
     });
@@ -83,12 +89,14 @@ function LoginPageContent() {
     event.preventDefault();
     setIsSubmitting(true);
     setErrorMessage("");
+    manualAuthInProgress.current = true;
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setErrorMessage(mapAuthErrorMessage(error.message));
       setIsSubmitting(false);
+      manualAuthInProgress.current = false;
       return;
     }
 
@@ -98,6 +106,7 @@ function LoginPageContent() {
       await supabase.auth.signOut();
       setErrorMessage("存在しないアカウントです。新規登録を行ってください。");
       setIsSubmitting(false);
+      manualAuthInProgress.current = false;
       return;
     }
 
