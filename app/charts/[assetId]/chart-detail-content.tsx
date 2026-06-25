@@ -39,7 +39,7 @@ function categoryColor(code: string): { bg: string; text: string } {
 function categoryLabel(code: string): string {
   switch (code) {
     case "index_stock": return "インデックス";
-    case "single_stock": return "日本株";
+    case "single_stock": return "個別株";
     case "resource": return "コモディティ";
     case "crypto": return "仮想通貨";
     default: return code;

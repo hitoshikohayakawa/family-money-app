@@ -45,9 +45,21 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 
 /** 日本株: Yahoo Finance から直接 JPY 価格を取得 */
 const STOCKS = [
-  { asset_code: "nintendo_stock",     market_symbol: "7974.T" },
-  { asset_code: "toyota_motor_stock", market_symbol: "7203.T" },
-  { asset_code: "sony_group_stock",   market_symbol: "6758.T" },
+  { asset_code: "nintendo_stock",        market_symbol: "7974.T" },
+  { asset_code: "toyota_motor_stock",    market_symbol: "7203.T" },
+  { asset_code: "sony_group_stock",      market_symbol: "6758.T" },
+  { asset_code: "sanrio_stock",          market_symbol: "8136.T" },
+  { asset_code: "sega_sammy_stock",      market_symbol: "6460.T" },
+  { asset_code: "kura_sushi_stock",      market_symbol: "2695.T" },
+  { asset_code: "recruit_holdings_stock", market_symbol: "6098.T" },
+  { asset_code: "konami_group_stock",    market_symbol: "9766.T" },
+  { asset_code: "aeon_stock",            market_symbol: "8267.T" },
+  { asset_code: "softbank_group_stock",  market_symbol: "9984.T" },
+];
+
+/** 日本の株価指数: Yahoo Finance から直接 JPY（円建て指数値）を取得 */
+const JP_INDICES = [
+  { asset_code: "nikkei225_index", market_symbol: "^N225" },
 ];
 
 /** 仮想通貨: Yahoo Finance BTC-JPY / ETH-JPY (すでに円建て) */
@@ -104,6 +116,7 @@ console.log(`📅  期間: ${period1} 〜 ${period2}\n`);
 // 全 asset_code を一括で DB から取得
 const allAssetCodes = [
   ...STOCKS.map((s) => s.asset_code),
+  ...JP_INDICES.map((s) => s.asset_code),
   ...CRYPTO.map((c) => c.asset_code),
   ...COMMODITIES.map((c) => c.asset_code),
   ...US_STOCKS.map((s) => s.asset_code),
@@ -151,6 +164,28 @@ for (const { asset_code, market_symbol } of STOCKS) {
   const asset = assetMap[asset_code];
   if (!asset) { console.log(`  ⚠️  DB に見つかりません: ${asset_code}`); continue; }
   console.log(`📈  ${asset.asset_name} (${market_symbol})`);
+  try {
+    const data = await yf.chart(market_symbol, { period1, period2, interval: "1d" }, { validateResult: false });
+    const rows = (data.quotes ?? [])
+      .filter((q) => q.close != null && !isNaN(q.close))
+      .map((q) => ({
+        asset_id: asset.id,
+        price_date: toJstDateStr(q.date),
+        unit_price_jpy: Math.round(q.close),
+        source: `yahoo_finance_daily:${market_symbol}`,
+      }));
+    await upsertRows(rows, asset.asset_name);
+  } catch (e) {
+    console.error(`  ✗ ${e.message}`);
+    results.failed.push({ name: asset.asset_name, error: e.message });
+  }
+}
+
+console.log("\n─── 日本の株価指数");
+for (const { asset_code, market_symbol } of JP_INDICES) {
+  const asset = assetMap[asset_code];
+  if (!asset) { console.log(`  ⚠️  DB に見つかりません: ${asset_code}`); continue; }
+  console.log(`📊  ${asset.asset_name} (${market_symbol})`);
   try {
     const data = await yf.chart(market_symbol, { period1, period2, interval: "1d" }, { validateResult: false });
     const rows = (data.quotes ?? [])

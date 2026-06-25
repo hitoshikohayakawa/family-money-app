@@ -182,6 +182,17 @@ console.log("📈  株式価格を取得中...");
 await run("任天堂",     "nintendo_stock",    () => fetchStockPrice("7974.T"));
 await run("トヨタ自動車", "toyota_motor_stock", () => fetchStockPrice("7203.T"));
 await run("ソニーグループ", "sony_group_stock",   () => fetchStockPrice("6758.T"));
+await run("サンリオ",         "sanrio_stock",          () => fetchStockPrice("8136.T"));
+await run("セガサミー",       "sega_sammy_stock",      () => fetchStockPrice("6460.T"));
+await run("くら寿司",         "kura_sushi_stock",      () => fetchStockPrice("2695.T"));
+await run("リクルート",       "recruit_holdings_stock", () => fetchStockPrice("6098.T"));
+await run("コナミHD",         "konami_group_stock",    () => fetchStockPrice("9766.T"));
+await run("イオン",           "aeon_stock",            () => fetchStockPrice("8267.T"));
+await run("ソフトバンクG",    "softbank_group_stock",  () => fetchStockPrice("9984.T"));
+
+// 株価指数（日経平均: 円建て指数値）
+console.log("\n📊  株価指数を取得中...");
+await run("日経平均", "nikkei225_index", () => fetchStockPrice("^N225"));
 
 // 仮想通貨
 console.log("\n🪙  仮想通貨価格を取得中...");
